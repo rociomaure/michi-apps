@@ -456,9 +456,9 @@ function vAjustes(){
       <div class="field"><span class="lab">Integrantes (${members().length})</span>
         <div class="list" style="gap:8px">${members().map(m=>`<div class="row" style="gap:8px">
           <input class="inp" data-int="${m.k}" value="${esc(m.n)}" maxlength="20" aria-label="Nombre de integrante" style="flex:1">
-          ${conApp(m.k)?`<span class="chip mint" title="Entró con su correo">📱${m.k===S.yo?" tú":""}</span>`:usado(m.k)?"":`<button class="round" data-quitar="${m.k}" aria-label="Quitar a ${esc(m.n)}">✕</button>`}</div>`).join("")}</div>
+          ${conApp(m.k)?`<span class="chip mint" title="Ya entró a la app">📱${m.k===S.yo?" tú":""}</span>`:usado(m.k)?"":`<button class="round" data-quitar="${m.k}" aria-label="Quitar a ${esc(m.n)}">✕</button>`}</div>`).join("")}</div>
         ${members().length<12?`<div class="row" style="gap:8px"><input class="inp" id="nuevo-int" maxlength="20" placeholder="Agregar a alguien…" style="flex:1"><button class="btn" data-act="add-int">＋</button></div>`:""}
-        <div class="hint">📱 = ya entró con su correo. A las demás puedes anotarles los gastos tú; si después instalan la app y escriben el mismo nombre, se quedan con sus gastos.</div></div>
+        <div class="hint">📱 = ya entró a la app. A las demás puedes anotarles los gastos tú; si después abren el link de invitación y tocan su nombre, se quedan con sus gastos.</div></div>
       <div class="field"><label for="pres">Presupuesto mensual (opcional)</label><input class="inp" id="pres" inputmode="numeric" value="${g.presupuesto?Number(g.presupuesto).toLocaleString("es-CL"):""}" placeholder="Ej: 500.000"></div>
       <button class="btn pink full" data-act="ajustes">Guardar 🎀</button></div>
     <div class="card list"><h2 style="font-size:20px">Invitar al grupo 💌</h2>
@@ -535,7 +535,7 @@ async function sendReminder(msg, para){
   if(DEMO) throw new Error("En el modo demo los recordatorios no se envían 🙂 Instala tu propia copia para usarlos.");
   let data; try{ data=await DB.remind(S.grupo.id,{mensaje:msg, para:para||null, titulo:`${S.grupo.icono||"🐾"} ${S.grupo.nombre} · ${nm(S.yo)}`}); }
   catch(_){ throw new Error("No se pudo enviar. Revisa tu conexión e inténtalo otra vez."); }
-  if(!data?.personas) throw new Error("Nadie más del grupo ha entrado a la app todavía. Compárteles el código (Ajustes).");
+  if(!data?.personas) throw new Error("Nadie más del grupo ha entrado a la app todavía. Mándales el link de invitación (Ajustes → Invitar al grupo).");
   if(!data?.sent) throw new Error("Todavía no activan las notificaciones en su celular (Ajustes → Notificaciones).");
   return data.sent;
 }
@@ -917,7 +917,7 @@ document.addEventListener("click", async e=>{
       await loadData(); closeSheet(); toast("Borrado 🗑️");
     }
     else if(a==="ask-salir-llave") $("#cf").innerHTML=`<div class="confirm"><div class="sub">Este grupo dejará de aparecer en este celular. Los gastos quedan para el resto.</div><button class="btn danger full" data-act="salir" data-k="${esc(d.k)}">Sí, quitarlo</button></div>`;
-    else if(a==="ask-salir") $("#cf").innerHTML=`<div class="confirm"><div class="sub">Dejarás de ver "${esc(S.grupo.nombre)}" en este correo. Los gastos quedan para el resto del grupo.</div><button class="btn danger full" data-act="salir">Sí, salir del grupo</button></div>`;
+    else if(a==="ask-salir") $("#cf").innerHTML=`<div class="confirm"><div class="sub">Dejarás de ver "${esc(S.grupo.nombre)}" en este celular. Los gastos quedan para el resto del grupo.</div><button class="btn danger full" data-act="salir">Sí, salir del grupo</button></div>`;
     else if(a==="salir"){
       await DB.salir(d.k||S.grupo.id);
       try{localStorage.removeItem("michiteam:last")}catch(_){}
