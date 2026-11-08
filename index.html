@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Michi Apps</title>
+<meta name="description" content="Apps gratuitas y adorables, con gatitos, para el día a día. Por Rocío Maure.">
+<meta name="theme-color" content="#e9defd">
+<link rel="icon" href="michi-cuentas/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: una sola columna centrada; arriba el gatito y el nombre, abajo una tarjeta tipo sticker por app */
+:root{
+  --bg:#f5f0ff; --paper:#ffffff; --ink:#352a4a; --soft:#7d7096; --line:#e3d8f7;
+  --lila:#b79cf2; --lila-2:#e9defd; --azul:#e3e9fc; --rosa:#f3e3f8; --crema:#fff6e5;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif; --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#211b30;--paper:#2f2744;--ink:#f1eaff;--soft:#b3a6cc;--line:#463b62;--lila:#bda3f6;--lila-2:#45386a;--azul:#323a5c;--rosa:#43325a;--crema:#3d3328;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#211b30;--paper:#2f2744;--ink:#f1eaff;--soft:#b3a6cc;--line:#463b62;--lila:#bda3f6;--lila-2:#45386a;--azul:#323a5c;--rosa:#43325a;--crema:#3d3328;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  background-image:radial-gradient(var(--lila-2) 1.3px,transparent 1.5px);background-size:24px 24px}
+main{max-width:760px;margin:0 auto;padding-block:48px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px}
+header{text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+header img{width:112px;height:112px;border-radius:28px;box-shadow:0 6px 0 var(--line)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,8vw,60px);line-height:1;margin:8px 0 0;letter-spacing:-.5px}
+h1 span{color:var(--lila)}
+.tag{font-size:19px;font-weight:700;max-width:34ch;margin:0;text-wrap:balance}
+.by{color:var(--soft);font-weight:700;font-size:14px}
+.by a{color:inherit}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:16px}
+.app{background:var(--paper);border:2px solid var(--line);border-radius:24px;box-shadow:0 5px 0 var(--line);padding:20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.top{display:flex;align-items:center;gap:12px}
+.ico{flex:0 0 56px;height:56px;border-radius:18px;display:grid;place-items:center;font-size:30px}
+.app h2{font-family:var(--display);font-size:24px;margin:0;line-height:1.1}
+.where{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--soft)}
+.app p{margin:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:6px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--ink);border-radius:999px;padding:8px 16px;font-weight:800;text-decoration:none;color:var(--ink);background:var(--paper);box-shadow:0 3px 0 var(--ink)}
+.btn.main{background:var(--lila);color:#2b2140;border-color:#2b2140;box-shadow:0 3px 0 #2b2140}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn:focus-visible{outline:3px solid var(--lila);outline-offset:3px}
+.soon{display:inline-block;background:var(--crema);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:800}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.why div{background:var(--lila-2);border-radius:18px;padding:14px 16px;font-weight:700}
+footer{text-align:center;color:var(--soft);font-size:14px;font-weight:700}
+footer a{color:inherit}
+@media (prefers-reduced-motion:no-preference){header img{animation:bob 3s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-6px)}}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="michi-cuentas/icons/icon-512.png" alt="Gatito negro de Michi Apps">
+    <h1>Michi <span>Apps</span></h1>
+    <p class="tag">Apps gratuitas y adorables, con gatitos, para el día a día.</p>
+    <div class="by">Hechas con cariño por <a href="https://github.com/rociomaure">Rocío Maure</a></div>
+  </header>
+
+  <section class="apps" aria-label="Apps">
+    <article class="app">
+      <div class="top"><div class="ico" style="background:var(--lila-2)"><img src="michi-cuentas/icons/icon-192.png" alt="" width="44" height="44" style="border-radius:12px"></div><div><h2>Michi Cuentas</h2><div class="where">Android · iPhone</div></div></div>
+      <p>Los gastos en pareja, claritos: fijos y cuotas que se anotan solos, quién le debe a quién, liquidar con un toque y recordatorios al celular.</p>
+      <div class="row"><a class="btn main" href="michi-cuentas/">🎮 Probar demo</a><a class="btn" href="https://github.com/rociomaure/michi-apps/tree/main/michi-cuentas#instálala-gratis">⬇️ Instalar</a></div>
+    </article>
+    <article class="app">
+      <div class="top"><div class="ico" style="background:var(--azul)"><img src="michi-print/docs/icono.png" alt="" width="44" height="44"></div><div><h2>Michi Print</h2><div class="where">Windows</div></div></div>
+      <p>Recorta cualquier parte de la pantalla con un atajo de teclado y un cursor de patita con garrita.</p>
+      <div class="row"><a class="btn main" href="https://github.com/rociomaure/michi-apps/releases/latest">⬇️ Descargar</a><a class="btn" href="https://github.com/rociomaure/michi-apps/tree/main/michi-print">Ver más</a></div>
+    </article>
+    <article class="app">
+      <div class="top"><div class="ico" style="background:var(--rosa)"><img src="michi-paint/docs/icono.png" alt="" width="44" height="44"></div><div><h2>Michi Paint</h2><div class="where">Windows</div></div></div>
+      <p>Raya, subraya y anota encima de cualquier programa: presentaciones, videos o clases. Con cursor de colita.</p>
+      <div class="row"><a class="btn main" href="https://github.com/rociomaure/michi-apps/releases/latest">⬇️ Descargar</a><a class="btn" href="https://github.com/rociomaure/michi-apps/tree/main/michi-paint">Ver más</a></div>
+    </article>
+    <article class="app">
+      <div class="top"><div class="ico" style="background:var(--crema)"><img src="michi-pet/docs/icono.png" alt="" width="44" height="44" style="border-radius:12px"></div><div><h2>Michi Pet</h2><div class="where">Windows</div></div></div>
+      <p>Un gatito que vive en tu escritorio: camina, ronronea si lo acaricias, duerme siesta en una esquina y juega con su ovillo.</p>
+      <div class="row"><a class="btn main" href="michi-pet/demo/">🎮 Conocerlo</a><a class="btn" href="https://github.com/rociomaure/michi-apps/releases/latest">⬇️ Descargar</a></div>
+    </article>
+  </section>
+
+  <section class="why" aria-label="Por qué Michi Apps">
+    <div>💸 Gratis de verdad: sin anuncios ni suscripciones</div>
+    <div>🔒 Tus datos quedan en tu cuenta o tu computador</div>
+    <div>🐱 Hechas para que den ganas de usarlas</div>
+  </section>
+
+  <footer>💌 ¿Ideas o comentarios? Escríbeme a <b>rocio.maure@gmail.com</b><br>Código abierto con licencia MIT · <a href="https://github.com/rociomaure/michi-apps">Ver en GitHub</a> · ⭐ ¡Una estrella ayuda mucho!</footer>
+</main>
+</body>
+</html>
