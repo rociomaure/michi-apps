@@ -11,13 +11,16 @@ Hechas con cariño por [Rocío Maure](https://github.com/rociomaure). Descárgal
 
 | | App | Para qué sirve | Dónde funciona | Probar / descargar |
 |:-:|---|---|---|---|
-| 🐈‍⬛ | **[Michi Cuentas](michi-cuentas/)** | Llevar los gastos en pareja: fijos, cuotas, quién le debe a quién y recordatorios | Celular (Android y iPhone) | [🎮 Demo](https://rociomaure.github.io/michi-apps/michi-cuentas/) · [Instalar](michi-cuentas/#instálala-gratis) |
-| 🐈 | **[Michi Pet](michi-pet/)** | Un gatito que vive en tu escritorio: camina, ronronea, duerme y juega con su ovillo | Windows | [🎮 Demo](https://rociomaure.github.io/michi-apps/michi-pet/demo/) · [⬇️ Descargar](https://github.com/rociomaure/michi-apps/releases/latest) |
+| 🐈‍⬛ | **[Michi Cuentas](michi-cuentas/)** | Los gastos **en pareja**: fijos, cuotas, quién le debe a quién y recordatorios | Celular (Android y iPhone) | [🎮 Demo](https://rociomaure.github.io/michi-apps/michi-cuentas/) · [Instalar](michi-cuentas/#instálala-gratis) |
+| 🐱 | **[Michi Cuentas Team](michi-cuentas-team/)** | Los gastos **del grupo**: viajes, roomies, asados. Divide entre todas o algunas y simplifica las deudas | Celular (Android y iPhone) | [📱 Usarla ya](https://rociomaure.github.io/michi-apps/michi-cuentas-team/) · [🎮 Demo](https://rociomaure.github.io/michi-apps/michi-cuentas-team/?demo=1) |
+| 🐈 | **[Michi Pet](michi-pet/)** | Un gatito que vive en tu escritorio: camina, juega con su ovillo y, si le haces doble clic, se tira panza arriba a ronronear | Windows | [🎮 Demo](https://rociomaure.github.io/michi-apps/michi-pet/demo/) · [⬇️ Descargar](https://github.com/rociomaure/michi-apps/releases/latest) |
 | ✂️ | **[Michi Print](michi-print/)** | Recortar la pantalla con un atajo y un cursor de patita | Windows | [⬇️ Descargar](https://github.com/rociomaure/michi-apps/releases/latest) |
 | 🖌️ | **[Michi Paint](michi-paint/)** | Rayar y anotar encima de cualquier programa (PPT, videos, clases) | Windows | [⬇️ Descargar](https://github.com/rociomaure/michi-apps/releases/latest) |
 
 <div align="center">
 <img src="michi-cuentas/docs/portada.png" alt="Pantallas de Michi Cuentas" width="90%">
+<br><br>
+<img src="michi-cuentas-team/docs/portada.png" alt="Pantallas de Michi Cuentas Team" width="90%">
 <br><br>
 <img src="michi-pet/docs/poses.png" alt="Michi Pet en sus distintas poses" width="90%">
 </div>
@@ -26,34 +29,33 @@ Hechas con cariño por [Rocío Maure](https://github.com/rociomaure). Descárgal
 
 ```
 michi-apps/
-├── michi-cuentas/   App web para el celular (con demo)
-├── michi-pet/       Mascota de escritorio para Windows (con demo web)
-├── michi-print/     Recortes de pantalla para Windows
-├── michi-paint/     Dibujar sobre la pantalla para Windows
-└── index.html       La portada de Michi Apps
+├── michi-cuentas/        Cuentas en pareja, app para el celular (con demo)
+├── michi-cuentas-team/   Cuentas del grupo, app para el celular, lista para usar y cifrada
+├── michi-pet/            Mascota de escritorio para Windows (con demo web)
+├── michi-print/          Recortes de pantalla para Windows
+├── michi-paint/          Dibujar sobre la pantalla para Windows
+└── index.html             La portada de Michi Apps
 ```
 
 Cada carpeta tiene su propio README con capturas, cómo instalarla y cómo está hecha. Los instaladores de Windows están en **[Releases](https://github.com/rociomaure/michi-apps/releases/latest)**.
+
+## ¿Cómo las uso?
+
+- 📱 **Quiero usarlas y listo:** cada app tiene un link para abrirla en el celular o un instalador para Windows. Sin saber nada de tecnología.
+- 🛠️ **Quiero el código:** todo es abierto. Cada carpeta explica cómo publicar tu propia copia y modificarla.
+
+## 🔒 Tu privacidad
+
+- **Yo no tengo acceso a tus datos.** Michi Cuentas Team cifra todo en tu celular antes de guardarlo: en la base de datos solo queda texto ilegible.
+- Los demos guardan todo solo en tu navegador.
+- Michi Pet, Michi Print y Michi Paint funcionan en tu computador y no envían nada a internet.
+- El código está a la vista: puedes revisar exactamente qué hace cada app.
 
 ## ¿Por qué Michi Apps?
 
 - 💸 **Gratis de verdad**: sin anuncios, sin suscripciones, sin límites
 - 🔒 **Tus datos son tuyos**: cada app guarda la información en tu propia cuenta o en tu computador
 - 🐱 **Hechas para que den ganas de usarlas**: colores suaves, gatitos y detalles cute
-
-## Sobre la autora
-
-**Rocío Maure · Arquitecta · Directora de Inteligencia de Mercado Inmobiliario**
-
-Soy arquitecta de profesión y actualmente me desempeño como directora de Inteligencia de Mercado Inmobiliario. Mi trabajo se centra en el análisis del mercado inmobiliario y la transformación de información en herramientas útiles para la toma de decisiones y la gestión de nuevos negocios.
-
-Apoyo directamente a la mesa comercial de la empresa en la que trabajo, desarrollando análisis que permiten optimizar procesos de negocio existentes e impulsar nuevas oportunidades desde su concepción.
-
-Me apasionan la tecnología, la inteligencia artificial y los gatos. Siempre aspirante a polímata, disfruto explorar distintas disciplinas, conectar conocimientos y mantenerme en constante aprendizaje.
-
-En este espacio comparto aplicaciones gratuitas para facilitar tareas, explorar datos y acercar la tecnología a necesidades cotidianas. Los gatos suelen tener un lugar en ellas, como parte de mi sello personal.
-
-[Ver mi perfil de GitHub](https://github.com/rociomaure) · [LinkedIn](https://www.linkedin.com/in/rocio-maure-villarroel/)
 
 ## Contacto
 
