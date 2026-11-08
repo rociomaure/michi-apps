@@ -1,0 +1,17 @@
+{
+  "name": "Michi Cuentas",
+  "short_name": "Michi Cuentas",
+  "description": "Las cuentas de la pareja, con gatitos.",
+  "lang": "es-CL",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f0ff",
+  "theme_color": "#e9defd",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

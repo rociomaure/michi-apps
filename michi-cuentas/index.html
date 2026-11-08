@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Michi Cuentas</title>
+<meta name="description" content="Las cuentas de la pareja, con gatitos.">
+<meta name="theme-color" content="#e9defd">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <h1>Michi <span>Cuentas</span></h1>
+    <div class="who" id="who"></div>
+  </header>
+  <div id="banner"></div>
+  <main id="view"><div class="card empty">Cargando… 🐾</div></main>
+</div>
+<button class="fab" id="fab" aria-label="Agregar gasto" hidden>+</button>
+<nav class="tabs" id="tabs" aria-label="Secciones" hidden><div class="in">
+  <button class="tab" data-tab="inicio"><span class="e">🏡</span>Inicio</button>
+  <button class="tab" data-tab="gastos"><span class="e">🧾</span>Gastos</button>
+  <button class="tab" data-tab="fijos"><span class="e">🔁</span>Fijos</button>
+  <button class="tab" data-tab="metas"><span class="e">🐷</span>Metas</button>
+  <button class="tab" data-tab="ajustes"><span class="e">🎀</span>Ajustes</button>
+</div></nav>
+<div id="layer"></div>
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
