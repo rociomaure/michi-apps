@@ -798,6 +798,13 @@ function downloadCSV(movsIn, pagosIn, label){
   a.download=`michi-team-${label||S.month}.csv`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
 }
 let tt; function toast(m){clearTimeout(tt);let el=$(".toast");if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=m;tt=setTimeout(()=>el.remove(),2200)}
+// "Sol, Amaru y Rayén" → ["Sol","Amaru","Rayén"] (sin repetidos)
+export function splitNames(txt){
+  const out=[]; for(const n of String(txt||"").split(/,|;|\s+y\s+|\s+e\s+|\s*&\s*|\n/i).map(x=>x.trim()).filter(Boolean)){ if(!out.some(o=>o.toLowerCase()===n.toLowerCase())) out.push(n.slice(0,20)); }
+  return out;
+}
+// Integrantes con los nombres que están escritos en Ajustes aunque aún no se hayan guardado
+const editedMembers = () => members().map(m=>({k:m.k, n:(document.querySelector(`[data-int="${m.k}"]`)?.value.trim()||m.n).slice(0,20)}));
 async function saveIntegrantes(list){
   await DB.saveGrupo(S.grupo.id, {...S.grupo, integrantes:list});
   await loadGrupo(); await loadMis();
@@ -810,7 +817,7 @@ document.addEventListener("submit", async e=>{
   try{
     if(id==="f-crear"){
       const yo=$("#o-n1").value.trim()||"Yo";
-      const otros=$("#o-otros").value.split(",").map(s=>s.trim()).filter(Boolean).slice(0,11);
+      const otros=splitNames($("#o-otros").value).filter(n=>n.toLowerCase()!==yo.toLowerCase()).slice(0,11);
       const integrantes=[{k:"a",n:yo.slice(0,20)}, ...otros.map((n,i)=>({k:"bcdefghijkl"[i], n:n.slice(0,20)}))];
       e.target.querySelector("button[type=submit]").disabled=true;
       const gid=await DB.crear({nombre:($("#o-gn").value.trim()||"Nuestro grupo").slice(0,40), icono:newIcon, integrantes, presupuesto:null});
@@ -863,7 +870,7 @@ document.addEventListener("click", async e=>{
   }
   if(d.quitar){
     if(usado(d.quitar)) return toast("No se puede quitar: ya tiene gastos o pagos anotados.");
-    try{ await saveIntegrantes(members().filter(m=>m.k!==d.quitar)); render(); toast("Listo 🐾"); }catch(ex){ toast(friendly(ex)); }
+    try{ await saveIntegrantes(editedMembers().filter(m=>m.k!==d.quitar)); render(); toast("Listo 🐾"); }catch(ex){ toast(friendly(ex)); }
     return;
   }
   const a=d.act; if(!a) return;
@@ -943,9 +950,11 @@ document.addEventListener("click", async e=>{
       await loadData(); closeSheet(); toast(+d.s>0?"¡A la alcancía! 🐷":"Listo");
     }
     else if(a==="add-int"){
-      const n=$("#nuevo-int").value.trim(); if(!n) return toast("Escribe un nombre");
-      const used=members().map(m=>m.k), k="abcdefghijkl".split("").find(x=>!used.includes(x)); if(!k) return toast("Máximo 12 personas");
-      await saveIntegrantes([...members(), {k, n:n.slice(0,20)}]); render(); toast(`${n} se sumó al grupo 🎉`);
+      const nuevos=splitNames($("#nuevo-int").value); if(!nuevos.length) return toast("Escribe un nombre");
+      const list=editedMembers(), libres="abcdefghijkl".split("").filter(x=>!list.some(m=>m.k===x));
+      if(nuevos.length>libres.length) return toast("Máximo 12 personas");
+      nuevos.forEach((n,i)=>list.push({k:libres[i], n}));
+      await saveIntegrantes(list); render(); toast(`${nuevos.join(" y ")} se ${nuevos.length>1?"sumaron":"sumó"} al grupo 🎉`);
     }
     else if(a==="ajustes"){
       const list=members().map(m=>({k:m.k, n:(document.querySelector(`[data-int="${m.k}"]`)?.value.trim()||m.n).slice(0,20)}));
