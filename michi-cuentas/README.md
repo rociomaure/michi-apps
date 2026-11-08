@@ -16,6 +16,8 @@
 
 Una app para llevar los gastos compartidos en pareja (o con tu roomie), hecha para el celular. Se instala desde el navegador, queda con su ícono de gatito y se sincroniza en vivo entre los dos teléfonos. Es como Splitwise, pero sin límites diarios, sin anuncios y mucho más cute.
 
+> ¿Son más de dos (un viaje, roomies, un asado)? Mira **[Michi Cuentas Team](../michi-cuentas-team/)**, la versión para grupos.
+
 ## Lo que hace
 
 - 🔁 **Gastos fijos y en cuotas que se anotan solos**: el arriendo cada mes, el sillón en 12 cuotas, el celular en 24
@@ -38,6 +40,12 @@ Una app para llevar los gastos compartidos en pareja (o con tu roomie), hecha pa
 <td><img src="docs/nuevo.png" alt="Agregar un gasto con íconos"></td>
 </tr>
 </table>
+
+## 🔒 Tu privacidad
+
+- **Rocío (quien hizo la app) no tiene acceso a tus datos.** El demo guarda todo solo en tu navegador, y cuando instalas tu copia, tus gastos viven en **tu propia cuenta** de Supabase.
+- Cada libreta solo la pueden ver sus dos integrantes: lo controla la base de datos, no solo la app.
+- El código es abierto: puedes revisar exactamente qué hace.
 
 ## Pruébala en 10 segundos
 
