@@ -1,14 +1,15 @@
-// Michi Cuentas Team · capa de datos con cifrado de extremo a extremo.
+// Michi Apps · capa de datos con cifrado de extremo a extremo (la usan Michi Cuentas y Michi Cuentas Team).
 // Todo lo que sale del celular va cifrado con la llave del grupo (AES-256-GCM).
 // La llave vive en este celular y en el link de invitación (después del #, que nunca llega al servidor).
 
 const TIPOS = { gastos: "gasto", reglas: "regla", pagos: "pago", metas: "meta", cierres: "cierre" };
 const LISTA = Object.fromEntries(Object.entries(TIPOS).map(([k, v]) => [v, k]));
-const KEYS = "michiteam:keys";
+
 
 export const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 export const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
 
+let KEYS = "michiteam:keys";
 function readKeys() { try { return JSON.parse(localStorage.getItem(KEYS) || "{}"); } catch (_) { return {}; } }
 function writeKeys(o) { try { localStorage.setItem(KEYS, JSON.stringify(o)); } catch (_) {} }
 export const keyFor = gid => readKeys()[gid] || null;
@@ -42,13 +43,21 @@ export function parseInvite(raw) {
 }
 
 export function createRealDB(sb, opts = {}) {
-  const BUCKET = opts.bucket || "team-recibos", FN = opts.fn || "recordar-team";
+  const P = opts.prefix || "team", BUCKET = opts.bucket || "team-recibos", FN = opts.fn || "recordar-team";
+  if (opts.keys) KEYS = opts.keys;
+  const tb = n => `${P}_${n}`;
   const strip = o => { const { id, creado, actualizado, grupo_id, ...rest } = o; return rest; };
   let channel;
   return {
     demo: false,
     async ensureSession() {
       let { data: { session } } = await sb.auth.getSession();
+      if (session) { // ¿sigue siendo válida? (si no, se crea una nueva y el link de invitación devuelve el acceso)
+        try {
+          const { error } = await sb.auth.getUser();
+          if (error && (error.status === 401 || error.status === 403 || /not.*exist|invalid|expired/i.test(error.message || ""))) { await sb.auth.signOut().catch(() => {}); session = null; }
+        } catch (_) { /* sin internet: se sigue con la sesión guardada */ }
+      }
       if (!session) {
         const { data, error } = await sb.auth.signInAnonymously();
         if (error) throw error;
@@ -57,19 +66,19 @@ export function createRealDB(sb, opts = {}) {
       return session;
     },
     async misGrupos(uid) {
-      const { data, error } = await sb.from("team_miembros").select("grupo_id,k,team_grupos(codigo,data)").eq("user_id", uid);
+      const { data, error } = await sb.from(tb("miembros")).select(`grupo_id,k,${tb("grupos")}(codigo,data)`).eq("user_id", uid);
       if (error) throw error;
       const out = [];
       for (const m of data || []) {
-        const k = keyFor(m.grupo_id), g = m.team_grupos ? await dec(k, m.team_grupos.data) : null;
-        out.push({ id: m.grupo_id, k: m.k, codigo: m.team_grupos?.codigo, grupo: g, sinLlave: !g });
+        const k = keyFor(m.grupo_id), g = m[tb("grupos")] ? await dec(k, m[tb("grupos")].data) : null;
+        out.push({ id: m.grupo_id, k: m.k, codigo: m[tb("grupos")]?.codigo, grupo: g, sinLlave: !g });
       }
       return out;
     },
     async grupo(gid) {
       const [{ data: g, error }, { data: ms }] = await Promise.all([
-        sb.from("team_grupos").select("id,codigo,data").eq("id", gid).single(),
-        sb.from("team_miembros").select("k").eq("grupo_id", gid)
+        sb.from(tb("grupos")).select("id,codigo,data").eq("id", gid).single(),
+        sb.from(tb("miembros")).select("k").eq("grupo_id", gid)
       ]);
       if (error) throw error;
       const plain = await dec(keyFor(gid), g.data);
@@ -77,7 +86,7 @@ export function createRealDB(sb, opts = {}) {
       return { grupo: { id: g.id, codigo: g.codigo, ...plain }, miembros: ms || [] };
     },
     async items(gid) {
-      const { data, error } = await sb.from("team_items").select("id,tipo,data,creado").eq("grupo_id", gid).order("creado", { ascending: true });
+      const { data, error } = await sb.from(tb("items")).select("id,tipo,data,creado").eq("grupo_id", gid).order("creado", { ascending: true });
       if (error) throw error;
       const out = { gastos: [], reglas: [], pagos: [], metas: [], cierres: [] }, k = keyFor(gid);
       await Promise.all((data || []).map(async r => { const o = await dec(k, r.data); if (o && LISTA[r.tipo]) out[LISTA[r.tipo]].push({ ...o, id: r.id, creado: r.creado }); }));
@@ -87,27 +96,27 @@ export function createRealDB(sb, opts = {}) {
     async insert(gid, t, objs) {
       const k = keyFor(gid), list = Array.isArray(objs) ? objs : [objs];
       const rows = await Promise.all(list.map(async o => ({ grupo_id: gid, tipo: TIPOS[t], data: await enc(k, strip(o)) })));
-      const { error } = await sb.from("team_items").insert(rows); if (error) throw error;
+      const { error } = await sb.from(tb("items")).insert(rows); if (error) throw error;
     },
     async update(gid, t, full) {
-      const { error } = await sb.from("team_items").update({ data: await enc(keyFor(gid), strip(full)), actualizado: new Date().toISOString() }).eq("id", full.id);
+      const { error } = await sb.from(tb("items")).update({ data: await enc(keyFor(gid), strip(full)), actualizado: new Date().toISOString() }).eq("id", full.id);
       if (error) throw error;
     },
-    async remove(t, id) { const { error } = await sb.from("team_items").delete().eq("id", id); if (error) throw error; },
+    async remove(t, id) { const { error } = await sb.from(tb("items")).delete().eq("id", id); if (error) throw error; },
     async saveGrupo(gid, g) {
-      const { nombre, icono, integrantes, presupuesto } = g;
-      const { error } = await sb.from("team_grupos").update({ data: await enc(keyFor(gid), { nombre, icono, integrantes, presupuesto }), actualizado: new Date().toISOString() }).eq("id", gid);
+      const { id, codigo, ...datos } = g;   // todo lo demás va cifrado
+      const { error } = await sb.from(tb("grupos")).update({ data: await enc(keyFor(gid), datos), actualizado: new Date().toISOString() }).eq("id", gid);
       if (error) throw error;
     },
     async crear(g) {
       const key = newKey();
-      const { data, error } = await sb.rpc("team_crear", { p_data: await enc(key, g) });
+      const { data, error } = await sb.rpc(tb("crear"), { p_data: await enc(key, g) });
       if (error) throw error;
       rememberKey(data.id, key);
       return data.id;
     },
     async ver(inv) {
-      const { data, error } = await sb.rpc("team_ver", { cod: inv.codigo });
+      const { data, error } = await sb.rpc(tb("ver"), { cod: inv.codigo });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) throw new Error("Este link de invitación no existe o el grupo se borró.");
@@ -116,12 +125,12 @@ export function createRealDB(sb, opts = {}) {
       return { id: row.id, grupo: g, conApp: row.con_app || [] };
     },
     async unirse(inv, k) {
-      const { data, error } = await sb.rpc("team_unirse", { cod: inv.codigo, p_k: k });
+      const { data, error } = await sb.rpc(tb("unirse"), { cod: inv.codigo, p_k: k });
       if (error) throw error;
       rememberKey(data.id, inv.key);
       return data.id;
     },
-    async salir(gid) { const { error } = await sb.rpc("team_salir", { g: gid }); if (error) throw error; forgetKey(gid); },
+    async salir(gid) { const { error } = await sb.rpc(tb("salir"), { g: gid }); if (error) throw error; forgetKey(gid); },
     async upload(gid, blob) {
       const bytes = await encBytes(keyFor(gid), new Uint8Array(await blob.arrayBuffer()));
       const path = `${gid}/${crypto.randomUUID()}.bin`;
@@ -137,14 +146,14 @@ export function createRealDB(sb, opts = {}) {
     removeFile(path) { sb.storage.from(BUCKET).remove([path]); },
     subscribe(gid, onItems, onGrupo) {
       if (channel) sb.removeChannel(channel);
-      channel = sb.channel("team-" + gid)
-        .on("postgres_changes", { event: "*", schema: "public", table: "team_items", filter: "grupo_id=eq." + gid }, onItems)
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "team_grupos", filter: "id=eq." + gid }, onGrupo)
+      channel = sb.channel(P + "-" + gid)
+        .on("postgres_changes", { event: "*", schema: "public", table: tb("items"), filter: "grupo_id=eq." + gid }, onItems)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: tb("grupos"), filter: "id=eq." + gid }, onGrupo)
         .subscribe();
     },
     async pushKey() { const { data, error } = await sb.functions.invoke(FN, { body: { action: "key" } }); if (error || !data?.publicKey) throw error || new Error("sin llave"); return data.publicKey; },
-    async savePush(uid, j) { const { error } = await sb.from("team_push_subs").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_id: uid }, { onConflict: "endpoint" }); if (error) throw error; },
-    async deletePush(endpoint) { await sb.from("team_push_subs").delete().eq("endpoint", endpoint); },
+    async savePush(uid, j) { const { error } = await sb.from(tb("push_subs")).upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_id: uid }, { onConflict: "endpoint" }); if (error) throw error; },
+    async deletePush(endpoint) { await sb.from(tb("push_subs")).delete().eq("endpoint", endpoint); },
     async remind(gid, body) { const { data, error } = await sb.functions.invoke(FN, { body: { ...body, grupo_id: gid } }); if (error) throw error; return data; },
     async reset() { try { await sb.auth.signOut(); } catch (_) {} }
   };

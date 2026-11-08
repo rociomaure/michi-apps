@@ -234,7 +234,7 @@ function render(){
   $("#fab").setAttribute("aria-label", S.tab==="metas"?"Nueva meta":"Agregar gasto");
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===S.tab?"page":"false"));
   $("#who").innerHTML = app ? `<button class="who-btn" data-act="grupos" aria-label="Cambiar de grupo">${S.online?"":'<span class="offline-dot"></span>'}${esc(S.grupo?.icono||"🧳")} ${esc(S.grupo?.nombre||"")} <span aria-hidden="true">▾</span></button>` : "";
-  $("#banner").innerHTML = app && DEMO ? `<div class="banner">🎮 <b>Modo demo</b> con datos de ejemplo. Juega con todo: lo que anotes se guarda solo en este navegador. <a href="https://github.com/rociomaure/michi-apps/tree/main/michi-cuentas-team#instálala-gratis" target="_blank" rel="noopener">Instálala gratis para tu grupo →</a></div>`
+  $("#banner").innerHTML = app && DEMO ? `<div class="banner">🎮 <b>Modo demo</b> con datos de ejemplo. Juega con todo: lo que anotes se guarda solo en este navegador. ${live?`<a href="${esc(appURL())}">Úsala de verdad con tu grupo →</a>`:`<a href="https://github.com/rociomaure/michi-apps/tree/main/michi-cuentas-team" target="_blank" rel="noopener">Cómo usarla de verdad →</a>`}</div>`
     : app && !S.online ? `<div class="banner">Sin internet: puedes mirar, pero los cambios se guardan cuando vuelva la conexión 🐾</div>` : "";
   const v=$("#view");
   if(S.view==="join") v.innerHTML=vJoin();
