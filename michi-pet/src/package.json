@@ -1,0 +1,9 @@
+{
+  "name": "michi-pet",
+  "productName": "Michi Pet",
+  "version": "1.1.0",
+  "description": "Michi Pet, un gatito que vive en tu escritorio",
+  "author": "Rocío Maure",
+  "license": "MIT",
+  "main": "main.js"
+}

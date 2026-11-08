@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' data:; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Michi Pet</title>
+<style>
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;user-select:none}
+#stage{position:fixed;inset:0}
+#probe{position:absolute;width:6cm;height:0;visibility:hidden}
+#shadow{position:absolute;left:0;top:0;height:14px;border-radius:50%;background:rgba(20,30,35,.28);filter:blur(4px);pointer-events:none}
+#pet{position:absolute;left:0;top:0;cursor:grab;will-change:transform;z-index:1}
+#yarn{position:absolute;left:0;top:0;cursor:grab;z-index:2;will-change:transform;-webkit-user-drag:none}
+#thread{position:absolute;left:0;top:0;pointer-events:none}
+#pet:active{cursor:grabbing}
+#pet.left .clip{transform:translateX(-50%) scaleX(-1)}
+.clip{position:absolute;left:50%;bottom:0;transform:translateX(-50%);opacity:0;transition:opacity .22s ease;pointer-events:none;display:block}
+.clip.on{opacity:1}
+</style></head>
+<body><div id="stage"><div id="probe"></div><div id="shadow"></div><div id="pet"></div></div>
+<script src="meta.js"></script><script src="pet.js"></script></body></html>
