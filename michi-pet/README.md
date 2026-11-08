@@ -15,7 +15,8 @@
 ## Lo que hace
 
 - 🚶 **Pasea** por la parte de abajo de tu pantalla, encima de todo
-- 😻 **Ronronea panza arriba** si lo frotas con el mouse un rato
+- 😻 **Hazle doble clic y se tira panza arriba a ronronear** (también si lo frotas con el mouse un rato)
+- 🙀 Un clic y te maúlla
 - 🤲 **Lo puedes tomar en brazos**: arrástralo y "corre" en el aire hacia donde lo muevas; al soltarlo cae de patitas
 - 🐾 **Amasa** y mueve las patitas cuando está contento
 - 🧶 **Juega con su ovillo**: lo persigue, lo golpea y se desenrolla la lana (también lo puedes lanzar tú)
