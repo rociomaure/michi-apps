@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Michi Pet · Demo</title>
+<meta name="description" content="Conoce a Michi Pet, un gatito que vive en tu escritorio. Demo en el navegador.">
+<link rel="icon" href="../docs/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap">
+<style>
+/* Layout: una pieza acogedora a pantalla completa; arriba el título y los botones, abajo el piso donde pasea el gatito */
+:root{
+  --wall:#fbf3e6; --wall-2:#f4e6cf; --floor:#d9b98f; --floor-2:#c9a374; --ink:#4a3528; --soft:#8a6f5c;
+  --card:#fffaf2; --accent:#e0a96d; --accent-ink:#3d2516;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif; --body:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--wall:#2b2320;--wall-2:#352b26;--floor:#5a4433;--floor-2:#4a3829;--ink:#f6e9da;--soft:#cdb4a0;--card:#3a2f29;--accent:#e6b07a;--accent-ink:#2b1a0e;color-scheme:dark}}
+:root[data-theme="dark"]{--wall:#2b2320;--wall-2:#352b26;--floor:#5a4433;--floor-2:#4a3829;--ink:#f6e9da;--soft:#cdb4a0;--card:#3a2f29;--accent:#e6b07a;--accent-ink:#2b1a0e;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--wall);color:var(--ink);font-family:var(--body);overflow:hidden;user-select:none}
+#stage{position:fixed;inset:0;background:linear-gradient(var(--wall),var(--wall-2))}
+#floor{position:absolute;left:0;right:0;bottom:0;height:26%;background:repeating-linear-gradient(90deg,var(--floor) 0 120px,var(--floor-2) 120px 122px);border-top:6px solid var(--floor-2)}
+#probe{position:absolute;width:6cm;height:0;visibility:hidden}
+#shadow{position:absolute;left:0;top:0;height:14px;border-radius:50%;background:rgba(40,25,15,.28);filter:blur(4px);pointer-events:none}
+#pet{position:absolute;left:0;top:0;cursor:grab;will-change:transform;z-index:1}
+#pet:active{cursor:grabbing}
+#yarn{position:absolute;left:0;top:0;cursor:grab;z-index:2;will-change:transform;-webkit-user-drag:none}
+#thread{position:absolute;left:0;top:0;pointer-events:none}
+#pet.left .clip{transform:translateX(-50%) scaleX(-1)}
+.clip{position:absolute;left:50%;bottom:0;transform:translateX(-50%);opacity:0;transition:opacity .22s ease;pointer-events:none;display:block}
+.clip.on{opacity:1}
+header{position:fixed;top:0;left:0;right:0;z-index:5;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;pointer-events:none}
+header>*{pointer-events:auto}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(32px,6vw,48px);line-height:1;margin:0}
+.tip{margin:0;font-weight:700;color:var(--soft);max-width:46ch;font-size:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button,.dl{font:inherit;font-weight:800;border:2px solid var(--ink);border-radius:999px;padding:8px 16px;background:var(--card);color:var(--ink);box-shadow:0 3px 0 var(--ink);cursor:pointer;text-decoration:none}
+button:active,.dl:active{transform:translateY(3px);box-shadow:none}
+button:focus-visible,.dl:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.dl{background:var(--accent);color:var(--accent-ink);border-color:var(--accent-ink);box-shadow:0 3px 0 var(--accent-ink)}
+#status{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5;text-align:center;font-weight:800;color:var(--ink);opacity:.8;font-size:15px;padding-inline:16px}
+.back{font-size:13px;font-weight:700;color:var(--soft)}
+.back a{color:inherit}
+</style>
+</head>
+<body>
+<div id="stage"><div id="floor"></div><div id="probe"></div><div id="shadow"></div><div id="pet"></div></div>
+<header>
+  <h1>Michi Pet 🐾</h1>
+  <p class="tip">Frótalo con el mouse para que ronronee, arrástralo para tomarlo en brazos, haz clic para que maúlle y doble clic para que se ponga panza arriba.</p>
+  <div class="row">
+    <button id="bRun" type="button">🏃 Llamarlo</button>
+    <button id="bYarn" type="button">🧶 Darle el ovillo</button>
+    <button id="bSleep" type="button">😴 A dormir</button>
+    <button id="bSound" type="button" aria-pressed="true">Sonido</button>
+    <a class="dl" href="https://github.com/rociomaure/michi-apps/releases/latest">⬇️ Descargar para Windows</a>
+  </div>
+  <div class="back"><a href="../../">← Michi Apps</a> · Se ve mejor en Chrome o Edge</div>
+</header>
+<div id="status" role="status">Michi Pet está sentadito</div>
+<script src="../src/meta.js"></script>
+<script>
+  // los archivos del gatito viven en ../src (los mismos de la app de Windows)
+  for (const k in window.MICHIPET_SRC) window.MICHIPET_SRC[k] = "../src/" + window.MICHIPET_SRC[k];
+  window.MICHIPET_YARN = "../src/" + window.MICHIPET_YARN;
+</script>
+<script src="../src/pet.js"></script>
+</body>
+</html>
