@@ -1,0 +1,17 @@
+{
+  "name": "Michi Cuentas Team",
+  "short_name": "Michi Team",
+  "description": "Las cuentas del grupo, con gatitos.",
+  "lang": "es-CL",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#effaf6",
+  "theme_color": "#d6f5ea",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
