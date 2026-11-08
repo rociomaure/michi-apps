@@ -957,7 +957,8 @@ document.addEventListener("click", async e=>{
       await saveIntegrantes(list); render(); toast(`${nuevos.join(" y ")} se ${nuevos.length>1?"sumaron":"sumó"} al grupo 🎉`);
     }
     else if(a==="ajustes"){
-      const list=members().map(m=>({k:m.k, n:(document.querySelector(`[data-int="${m.k}"]`)?.value.trim()||m.n).slice(0,20)}));
+      const list=editedMembers(), nuevos=splitNames($("#nuevo-int")?.value), libres="abcdefghijkl".split("").filter(x=>!list.some(m=>m.k===x));
+      nuevos.slice(0,libres.length).forEach((n,i)=>list.push({k:libres[i], n}));   // si escribió a alguien en "Agregar" y tocó Guardar, también se suma
       const ic=document.querySelector("[data-gicon][aria-pressed='true']")?.dataset.gicon||S.grupo.icono;
       const body={nombre:$("#gn").value.trim()||"Nuestro grupo", icono:ic, integrantes:list, presupuesto:+digits($("#pres").value)||null};
       await DB.saveGrupo(S.grupo.id,{...S.grupo,...body});
