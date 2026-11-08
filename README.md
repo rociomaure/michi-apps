@@ -41,6 +41,20 @@ Cada carpeta tiene su propio README con capturas, cómo instalarla y cómo está
 - 🔒 **Tus datos son tuyos**: cada app guarda la información en tu propia cuenta o en tu computador
 - 🐱 **Hechas para que den ganas de usarlas**: colores suaves, gatitos y detalles cute
 
+## Sobre la autora
+
+**Rocío Maure · Arquitecta · Directora de Inteligencia de Mercado Inmobiliario**
+
+Soy arquitecta de profesión y actualmente me desempeño como directora de Inteligencia de Mercado Inmobiliario. Mi trabajo se centra en el análisis del mercado inmobiliario y la transformación de información en herramientas útiles para la toma de decisiones y la gestión de nuevos negocios.
+
+Apoyo directamente a la mesa comercial de la empresa en la que trabajo, desarrollando análisis que permiten optimizar procesos de negocio existentes e impulsar nuevas oportunidades desde su concepción.
+
+Me apasionan la tecnología, la inteligencia artificial y los gatos. Siempre aspirante a polímata, disfruto explorar distintas disciplinas, conectar conocimientos y mantenerme en constante aprendizaje.
+
+En este espacio comparto aplicaciones gratuitas para facilitar tareas, explorar datos y acercar la tecnología a necesidades cotidianas. Los gatos suelen tener un lugar en ellas, como parte de mi sello personal.
+
+[Ver mi perfil de GitHub](https://github.com/rociomaure) · [LinkedIn](https://www.linkedin.com/in/rocio-maure-villarroel/)
+
 ## Contacto
 
 ¿Ideas, errores o quieres contarme cómo usas las Michi Apps? 💌
