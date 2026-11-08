@@ -6,7 +6,9 @@
 
 **Las cuentas de la pareja, con un gatito que te dice quién le debe a quién.** 🐈‍⬛💜
 
-[🎮 Probar el demo](https://rociomaure.github.io/michi-apps/michi-cuentas/) · [⬇️ Instálala gratis](#instálala-gratis) · [💌 Volver a Michi Apps](../README.md)
+Una app para el celular (Android y iPhone), gratis, sin anuncios y con cifrado de extremo a extremo.
+
+[📱 Usarla ahora](https://rociomaure.github.io/michi-apps/michi-cuentas/) · [🎮 Ver el demo](https://rociomaure.github.io/michi-apps/michi-cuentas/?demo=1) · [🐱 ¿Es para un grupo? Michi Cuentas Team](../michi-cuentas-team/) · [💌 Volver a Michi Apps](../README.md)
 
 <img src="docs/portada.png" alt="Pantallas de Michi Cuentas: inicio, detalle de la deuda y gastos fijos" width="100%">
 
@@ -14,7 +16,7 @@
 
 ## ¿Qué es?
 
-Una app para llevar los gastos compartidos en pareja (o con tu roomie), hecha para el celular. Se instala desde el navegador, queda con su ícono de gatito y se sincroniza en vivo entre los dos teléfonos. Es como Splitwise, pero sin límites diarios, sin anuncios y mucho más cute.
+Una app para llevar los gastos compartidos en pareja (o con tu roomie), hecha para el celular. Se abre desde un link, se instala con su ícono de gatito y se sincroniza en vivo entre los dos teléfonos. Es como Splitwise, pero sin límites diarios, sin anuncios y mucho más cute.
 
 > ¿Son más de dos (un viaje, roomies, un asado)? Mira **[Michi Cuentas Team](../michi-cuentas-team/)**, la versión para grupos.
 
@@ -25,13 +27,12 @@ Una app para llevar los gastos compartidos en pareja (o con tu roomie), hecha pa
 - 🐱 **Te dice clarito quién debe**: "Sol te debe $284.677" en un celular y "Le debes a Luna" en el otro
 - ✅ **Liquidar deuda**: cuando transfieren, un toque cierra el período, lo guarda en el historial y deja todo en blanco
 - 🔔 **Recordatorios**: "¡Hay que liquidar las cuentas! 💸" le llega como notificación al celular de tu pareja
-- 📸 **Foto del recibo**, notas y reacciones 😻 en cada gasto
+- 📸 **Foto de la boleta**, notas y reacciones 😻 en cada gasto
 - 🎨 **90 íconos** (comida, casa y muebles, suscripciones, mascotas…) o cualquier emoji
 - 🎯 **Presupuesto mensual** con aviso al 80 %
 - 🐷 **Metas de ahorro** compartidas
 - 🔎 Buscador, gráfico de 6 meses y descarga para Excel
 - 📴 Funciona sin internet para mirar
-- 🔒 Cada pareja ve solo lo suyo (lo controla la base de datos, no solo la app)
 
 <table>
 <tr>
@@ -43,53 +44,55 @@ Una app para llevar los gastos compartidos en pareja (o con tu roomie), hecha pa
 
 ## 🔒 Tu privacidad
 
-- **Rocío (quien hizo la app) no tiene acceso a tus datos.** El demo guarda todo solo en tu navegador, y cuando instalas tu copia, tus gastos viven en **tu propia cuenta** de Supabase.
-- Cada libreta solo la pueden ver sus dos integrantes: lo controla la base de datos, no solo la app.
+- **Nadie más puede ver sus cuentas, ni siquiera quien hizo la app.** Todo se cifra en tu celular (AES-256) antes de guardarse, y la llave de su libreta viaja solo dentro del link de invitación.
+- La base de datos solo guarda texto ilegible y lo mínimo para funcionar: qué celular pertenece a qué libreta y la fecha de cada registro.
+- **Sin registro, sin correo y sin contraseñas.**
 - El código es abierto: puedes revisar exactamente qué hace.
 
-## Pruébala en 10 segundos
+> 🔑 **Importante:** el link de invitación es la llave de su libreta. Guárdenlo (por ejemplo, en su chat de WhatsApp) por si cambian de celular, y no lo compartan con nadie más.
 
-Abre el **[demo](https://rociomaure.github.io/michi-apps/michi-cuentas/)** en tu celular. Viene con datos de ejemplo de Luna y Sol, y puedes anotar, liquidar y jugar con todo: lo que hagas se guarda solo en tu navegador.
+---
 
-## Instálala gratis
+## 📱 Camino 1 · Quiero usarla y listo
 
-Tu propia copia, para ti y tu pareja, en unos 10 minutos. Todo con planes gratuitos.
+No necesitas saber nada de tecnología.
 
-### 1. Base de datos (Supabase)
+1. **Abre la app en tu celular:** [rociomaure.github.io/michi-apps/michi-cuentas](https://rociomaure.github.io/michi-apps/michi-cuentas/)
+2. **Crea su libreta:** escribe tu nombre y el de tu pareja
+3. **Invita a tu pareja:** en **Ajustes → Invitar a tu pareja**, toca **WhatsApp** y mándale el link
+4. Tu pareja abre el link, **toca su nombre** y listo 💜
 
-1. Crea una cuenta en [supabase.com](https://supabase.com) y un proyecto nuevo (plan Free)
-2. **SQL Editor → New query** → pega todo [`supabase/schema.sql`](supabase/schema.sql) → **Run**
-3. **Edge Functions → Deploy a new function → Via editor** → llámala `recordar` → pega [`supabase/functions/recordar/index.ts`](supabase/functions/recordar/index.ts) → **Deploy**
-4. En la función, **Settings** → desactiva **Verify JWT with legacy secret** → **Save** (la función ya revisa quién envía)
-5. **Project Settings → API Keys** → copia la *Project URL* y la *publishable key*
+¿Quieres probar antes? Abre el **[demo](https://rociomaure.github.io/michi-apps/michi-cuentas/?demo=1)**: viene con datos de ejemplo de Luna y Sol, y lo que hagas se guarda solo en tu navegador.
 
-### 2. Conecta la app
+### Instálala como app (queda con su ícono de gatito)
 
-Abre [`config.js`](config.js) y pega tu URL y tu publishable key. Esa llave es pública por diseño: la seguridad la dan las reglas de la base de datos.
-
-### 3. Publícala (Vercel)
-
-1. Crea una cuenta en [vercel.com](https://vercel.com)
-2. **Add New → Project** → arrastra la carpeta `michi-cuentas` → **Deploy**
-3. Copia tu link (ej: `mi-michi-cuentas.vercel.app`)
-4. En Supabase → **Authentication → URL Configuration**: pon ese link en *Site URL* y agrega `https://tu-link/**` en *Redirect URLs*
-
-### 4. Instálala en los celulares
-
-- **Android:** abre tu link en Chrome → ⋮ → **Instalar app**
-- **iPhone:** abre tu link en Safari → Compartir → **Agregar a inicio**
-- Una entra con su correo → **Crear nuestra libreta** → en **Ajustes** aparece un código de 6 letras
-- La otra entra con su correo → **Ya tengo un código** → escribe el código
+- **Android (Chrome):** abre la app → menú **⋮** → **Instalar app** (o "Agregar a pantalla principal")
+- **iPhone (Safari):** abre la app → botón **Compartir** (cuadrito con flecha) → **Agregar a inicio**
 - Cada una activa las notificaciones en **Ajustes → Notificaciones** 🔔
 
-> 💡 En iPhone, para entrar, copia el link del correo (mantenlo presionado → Copiar) y pégalo en la app en vez de tocarlo.
+> 💡 **En iPhone:** la app instalada y Safari no comparten lo guardado. Si abriste el link de invitación en Safari y después instalaste la app, ábrela desde el ícono, toca **"¿Te invitaron?"** y pega el link.
 
-## Cómo está hecha
+---
+
+## 🛠️ Camino 2 · Quiero el código (para personas técnicas)
+
+Tu propia copia, en tu propia cuenta, para modificarla como quieras. Todo con planes gratuitos.
+
+1. **Supabase:** crea un proyecto en [supabase.com](https://supabase.com)
+   - **SQL Editor → New query** → pega [`supabase/schema.sql`](supabase/schema.sql) → **Run**
+   - **Authentication → Sign In / Providers** → activa **Allow anonymous sign-ins**
+   - (Opcional, para recordatorios) **Edge Functions → Deploy a new function → Via editor** → nombre `recordar-pareja` → pega [`supabase/functions/recordar-pareja/index.ts`](supabase/functions/recordar-pareja/index.ts) → **Deploy** → en sus **Settings** desactiva **Verify JWT with legacy secret**
+2. **Conecta la app:** en [`config.js`](config.js) pega tu *Project URL* y tu *publishable key*
+3. **Publícala** en [Vercel](https://vercel.com), GitHub Pages o cualquier hosting de archivos estáticos (no tiene pasos de compilación)
+
+> Michi Cuentas y Michi Cuentas Team usan tablas distintas (`pareja_…` y `team_…`), así que pueden vivir en el mismo proyecto de Supabase.
+
+### Cómo está hecha
 
 - HTML, CSS y JavaScript sin frameworks, instalable como PWA
-- [Supabase](https://supabase.com) para la base de datos, el inicio de sesión sin contraseña, las fotos y el tiempo real
-- Notificaciones Web Push con una Edge Function
-- Sin pasos de compilación: los archivos se publican tal cual
+- [Supabase](https://supabase.com) para la base de datos, la sesión anónima, las fotos y el tiempo real
+- Cifrado con Web Crypto (AES-256-GCM) en [`data.js`](data.js); el modo demo vive en [`demo.js`](demo.js)
+- Notificaciones Web Push con una Edge Function que no guarda nada
 
 ## Contacto
 

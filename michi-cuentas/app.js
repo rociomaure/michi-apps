@@ -1,5 +1,6 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.80.0/+esm";
-import { createDemoClient } from "./demo.js";
+import { createDemoDB } from "./demo.js";
+import { createRealDB, parseInvite, keyFor, rememberKey } from "./data.js";
 
 /* ================= utilidades ================= */
 const ICON_GROUPS = [
@@ -143,56 +144,64 @@ function cat(mood="happy",size=96,acc="var(--pink)"){
   </svg>`;
 }
 
-/* ================= Supabase ================= */
+/* ================= datos ================= */
+const lsSet = (k,v) => { try{ localStorage.setItem(k,v) }catch(_){} };
+const lsGet = k => { try{ return localStorage.getItem(k) }catch(_){ return null } };
 const CFG = window.MICHI_CONFIG || {};
-const configured = CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes("TU-PROYECTO");
-const DEMO = !configured;
-const sb = configured ? createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}) : createDemoClient();
-const TABLES = ["gastos","reglas","pagos","metas","cierres"];
+const live = !!CFG.SUPABASE_URL && !CFG.SUPABASE_URL.includes("TU-PROYECTO");
+const DEMO = !live || new URLSearchParams(location.search).has("demo");
+const DB = DEMO ? createDemoDB() : createRealDB(createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}),
+  {prefix:"pareja", bucket:"pareja-recibos", fn:"recordar-pareja", keys:"michi:keys"});
+const appURL = () => location.origin+location.pathname;
+const inviteLink = () => appURL()+"#g="+S.hogar.codigo+"."+keyFor(S.hogar.id);
+let INVITE = parseInvite(location.hash);
+if(INVITE) history.replaceState(null,"",location.pathname+location.search);
 const cacheKey = () => "michi:"+S.hogar?.id;
-function saveCache(){ try{ localStorage.setItem(cacheKey(), JSON.stringify({hogar:S.hogar,gastos:S.gastos,reglas:S.reglas,pagos:S.pagos,metas:S.metas,cierres:S.cierres})) }catch(_){} }
+function saveCache(){ try{ localStorage.setItem(cacheKey(), JSON.stringify({hogar:S.hogar,lado:S.lado,gastos:S.gastos,reglas:S.reglas,pagos:S.pagos,metas:S.metas,cierres:S.cierres})) }catch(_){} }
 function loadCache(id){ try{ return JSON.parse(localStorage.getItem("michi:"+id)||"null") }catch(_){ return null } }
 
-async function loadTable(t){
-  const {data,error} = await sb.from(t).select("*").eq("hogar_id",S.hogar.id).order("creado",{ascending:true});
-  if(!error){ S[t]=data; saveCache(); }
-}
-async function loadHogar(){
-  const {data} = await sb.from("hogares").select("*").eq("id",S.hogar.id).single();
-  if(data){ S.hogar=data; saveCache(); }
-}
-let channel;
-function subscribe(){
-  if(channel) sb.removeChannel(channel);
-  channel = sb.channel("hogar-"+S.hogar.id);
-  for(const t of TABLES) channel.on("postgres_changes",{event:"*",schema:"public",table:t,filter:"hogar_id=eq."+S.hogar.id}, async()=>{await loadTable(t); refresh();});
-  channel.on("postgres_changes",{event:"UPDATE",schema:"public",table:"hogares",filter:"id=eq."+S.hogar.id}, async()=>{await loadHogar(); refresh();});
-  channel.subscribe();
-}
-async function enterHogar(h){
-  S.hogar=h;
-  const c=loadCache(h.id); if(c){Object.assign(S,{gastos:c.gastos||[],reglas:c.reglas||[],pagos:c.pagos||[],metas:c.metas||[],cierres:c.cierres||[]});}
+async function loadData(){ Object.assign(S, await DB.items(S.hogar.id)); saveCache(); }
+async function loadHogar(){ const {grupo,miembros}=await DB.grupo(S.hogar.id); S.hogar=grupo; S.miembros=miembros; saveCache(); }
+function subscribe(){ DB.subscribe(S.hogar.id, async()=>{await loadData(); refresh();}, async()=>{await loadHogar(); refresh();}); }
+async function enterHogar(m){
+  if(m.sinLlave){ S.llave=m; S.view="llave"; return render(); }
+  S.lado=m.k; S.hogar={id:m.id, codigo:m.codigo, ...(m.grupo||{})};
+  Object.assign(S,{gastos:[],reglas:[],pagos:[],metas:[],cierres:[]});
+  const c=loadCache(m.id); if(c){ Object.assign(S,{hogar:c.hogar||S.hogar,gastos:c.gastos||[],reglas:c.reglas||[],pagos:c.pagos||[],metas:c.metas||[],cierres:c.cierres||[]}); }
+  lsSet("michi:last",m.id);
   S.view="app"; render();
-  await Promise.all([loadHogar(), ...TABLES.map(loadTable)]);
+  try{ await Promise.all([loadHogar(), loadData()]); }
+  catch(e){ if(e.message==="sin-llave"){ S.llave=m; S.view="llave"; return render(); } }
   subscribe(); refresh();
-  if(DEMO) S.push="demo"; else pushState().then(st=>{S.push=st; refresh();});
+  if(DEMO) S.push="demo"; else if(!S.push) pushState().then(st=>{S.push=st; refresh();});
 }
 async function boot(){
-  const {data:{session}} = await sb.auth.getSession();
-  await onSession(session);
-  sb.auth.onAuthStateChange((ev,ses)=>{ if(ev==="SIGNED_IN" && !S.user) onSession(ses); if(ev==="SIGNED_OUT"){S.user=null;S.hogar=null;S.view="login";render();} });
+  try{ S.user=(await DB.ensureSession()).user; }
+  catch(e){ S.view="error"; return render(); }
+  if(INVITE){ const inv=INVITE; INVITE=null; return openInvite(inv); }
+  await home();
 }
-async function onSession(session){
-  if(!session){ S.view="login"; return render(); }
-  S.user=session.user;
-  const {data:m,error} = await sb.from("miembros").select("hogar_id,lado").eq("user_id",S.user.id).maybeSingle();
-  if(error && !navigator.onLine){
-    const last=localStorage.getItem("michi:last"); const c=last&&loadCache(last);
-    if(c){ S.lado=localStorage.getItem("michi:lado")||"a"; S.hogar=c.hogar; Object.assign(S,c); S.view="app"; return render(); }
+async function home(prefer){
+  let mis;
+  try{ mis=await DB.misGrupos(S.user.id); }
+  catch(e){
+    const last=lsGet("michi:last"), c=last&&loadCache(last);
+    if(c){ Object.assign(S,c); S.view="app"; return render(); }
+    S.view="error"; return render();
   }
-  if(!m){ S.view="onboard"; return render(); }
-  S.lado=m.lado; try{localStorage.setItem("michi:last",m.hogar_id);localStorage.setItem("michi:lado",m.lado)}catch(_){}
-  await enterHogar({id:m.hogar_id});
+  S.mis=mis;
+  if(!mis.length){ S.view="onboard"; return render(); }
+  const last=prefer||lsGet("michi:last");
+  await enterHogar(mis.find(m=>m.id===last) || mis.find(m=>!m.sinLlave) || mis[0]);
+}
+async function openInvite(inv){
+  S.view="loading"; render();
+  try{
+    const v=await DB.ver(inv);
+    let mis=[]; try{ mis=await DB.misGrupos(S.user.id); }catch(_){}
+    if(mis.some(m=>m.id===v.id)){ rememberKey(v.id, inv.key); return home(v.id); }
+    S.inv={...inv, ...v}; S.soy=null; S.view="join"; render();
+  }catch(e){ await home().catch(()=>{}); toast(e.message||"No pude abrir la invitación"); }
 }
 
 /* ================= render ================= */
@@ -204,84 +213,54 @@ function render(){
   $("#fab").setAttribute("aria-label", S.tab==="metas"?"Nueva meta":"Agregar gasto");
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-current", b.dataset.tab===S.tab?"page":"false"));
   $("#who").innerHTML = app ? `<button class="who-btn" data-go-ajustes="1" aria-label="Editar nombres">${S.online?"":'<span class="offline-dot"></span>'}${esc(nm("a"))} 🤍 ${esc(nm("b"))} <span aria-hidden="true">✏️</span></button>` : "";
-  $("#banner").innerHTML = app && DEMO ? `<div class="banner">🎮 <b>Modo demo</b> con datos de ejemplo. Juega con todo: lo que anotes se guarda solo en este navegador. <a href="https://github.com/rociomaure/michi-apps/tree/main/michi-cuentas#instálala-gratis" target="_blank" rel="noopener">Instálala gratis para tu pareja →</a></div>`
+  $("#banner").innerHTML = app && DEMO ? `<div class="banner">🎮 <b>Modo demo</b> con datos de ejemplo. Juega con todo: lo que anotes se guarda solo en este navegador. ${live?`<a href="${esc(appURL())}">Úsala de verdad con tu pareja →</a>`:`<a href="https://github.com/rociomaure/michi-apps/tree/main/michi-cuentas" target="_blank" rel="noopener">Cómo usarla de verdad →</a>`}</div>`
     : app && !S.online ? `<div class="banner">Sin internet: puedes mirar, pero los cambios se guardan cuando vuelva la conexión 🐾</div>` : "";
   const v=$("#view");
-  if(S.view==="setup") v.innerHTML=vSetup();
-  else if(S.view==="login") v.innerHTML=vLogin();
-  else if(S.view==="code") v.innerHTML=vCode();
+  if(S.view==="join") v.innerHTML=vJoin();
+  else if(S.view==="llave") v.innerHTML=vLlave();
+  else if(S.view==="error") v.innerHTML=`<div class="card center">${cat("wow",100)}<h2>No pude conectarme</h2><div class="hint">Revisa tu internet e inténtalo de nuevo.</div><button class="btn pink" data-act="reintentar">Reintentar</button></div>`;
   else if(S.view==="onboard") v.innerHTML=vOnboard();
   else if(S.view==="loading") v.innerHTML=`<div class="card empty">${cat("sleep",70)}Cargando…</div>`;
   else v.innerHTML = {inicio:vInicio,gastos:vGastos,fijos:vFijos,metas:vMetas,ajustes:vAjustes}[S.tab]();
   hydrateImages();
 }
-function vSetup(){return `<div class="center login">${cat("wow",120)}<h2>Falta conectar la base de datos</h2><div class="hint">Completa el archivo config.js con la URL y la anon key de tu proyecto de Supabase (ver README).</div></div>`}
-function vLogin(){return `<div class="center login">${cat("happy",130)}
-  <h2>¡Hola! Entremos a sus cuentas</h2>
-  <div class="hint">Te mando un código a tu correo. Sin contraseñas.</div>
-  <form id="f-login" class="field" style="width:100%">
-    <label for="l-email">Tu correo</label>
-    <input class="inp" id="l-email" type="email" autocomplete="email" inputmode="email" required value="${esc(S.email)}" placeholder="tu@gmail.com">
-    <div id="l-err" class="hint" style="color:var(--danger)"></div>
-    <button class="btn pink full" type="submit">Enviarme el código 💌</button>
-  </form></div>`}
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent||"") || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-function vCode(){
-  const linkForm = `<form id="f-link" class="field" style="width:100%">
-    <label for="l-link">Pega aquí el link del correo</label>
-    <input class="inp" id="l-link" type="url" inputmode="url" autocomplete="off" required placeholder="https://…supabase.co/auth/v1/verify?…">
-    <div class="hint">En el correo <b>no toques</b> el link: mantenlo presionado → <b>Copiar</b> y pégalo aquí.</div>
-    <button class="btn pink full" type="submit">Entrar con el link 🔗</button>
-  </form>`;
-  const codeForm = `<form id="f-code" class="field" style="width:100%">
-    <label for="l-code">¿Te llegó un código de 6 dígitos?</label>
-    <input class="inp money" id="l-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required style="text-align:center;letter-spacing:6px">
-    <button class="btn ${isIOS?"":"pink"} full" type="submit">Entrar con el código 🐾</button>
-  </form>`;
-  return `<div class="center login">${cat("wow",110)}
-  <h2>Revisa tu correo</h2>
-  <div class="hint">Mandé un correo a <b>${esc(S.email)}</b>.${isIOS?"":" Toca el link del correo, o usa una de estas opciones:"}</div>
-  ${isIOS?`<div class="banner" style="text-align:left">🍎 En iPhone, la app y Safari no comparten la sesión. Por eso conviene <b>copiar el link</b> del correo en vez de tocarlo.</div>${linkForm}${codeForm}`:`${codeForm}${linkForm}`}
-  <div id="l-err" class="hint" style="color:var(--danger)"></div>
-  <button class="btn ghost full" type="button" data-act="back-login">Usar otro correo</button>
-  </div>`;
-}
-export function parseAuthLink(raw){
-  let u; try{ u=new URL(String(raw||"").trim()); }catch(_){ return null; }
-  const h=new URLSearchParams(u.hash.replace(/^#/,""));
-  if(h.get("access_token") && h.get("refresh_token")) return {kind:"session", access_token:h.get("access_token"), refresh_token:h.get("refresh_token")};
-  const th=u.searchParams.get("token_hash")||u.searchParams.get("token");
-  if(th) return {kind:"otp", token_hash:th, type:u.searchParams.get("type")||"magiclink"};
-  return null;
-}
-async function loginWithLink(raw){
-  const p=parseAuthLink(raw);
-  if(!p) throw new Error("Ese no parece el link del correo. Cópialo completo, desde el botón o enlace del mail.");
-  if(p.kind==="session"){
-    const {data,error}=await sb.auth.setSession({access_token:p.access_token,refresh_token:p.refresh_token});
-    if(error) throw new Error("Ese link ya venció. Pide un correo nuevo.");
-    return data.session;
-  }
-  const types=[...new Set([p.type==="signup"?"signup":p.type==="email"?"email":"magiclink","email"])];
-  let last;
-  for(const type of types){
-    const {data,error}=await sb.auth.verifyOtp({token_hash:p.token_hash,type});
-    if(!error && data?.session) return data.session;
-    last=error;
-  }
-  throw new Error("Ese link ya se usó o venció. Pide un correo nuevo y esta vez cópialo sin tocarlo.");
-}
+const backBtn = () => S.mis?.some(m=>!m.sinLlave) ? `<button class="btn ghost full" data-act="back-app">Volver a nuestra libreta</button>` : "";
 function vOnboard(){return `<div class="list" style="gap:16px">
-  <div class="card center">${cat("happy",100)}<h2>Su libreta compartida</h2><div class="hint">Una de las dos la crea y le pasa el código a la otra.</div></div>
+  <div class="card center">${cat("happy",100)}<h2>Su libreta compartida</h2><div class="hint">Una de las dos la crea y le manda el link a la otra por WhatsApp. Sin registrarse.</div></div>
   <form id="f-crear" class="card list"><h2 style="font-size:20px">Crear nuestra libreta</h2>
     <div class="field"><label for="o-n1">¿Cómo te llamo?</label><input class="inp" id="o-n1" maxlength="20" required placeholder="Ej: Luna"></div>
+    <div class="field"><label for="o-n2">¿Y a tu pareja?</label><input class="inp" id="o-n2" maxlength="20" placeholder="Ej: Sol"></div>
     <button class="btn pink full" type="submit">Crear libreta 🎀</button></form>
-  <form id="f-unir" class="card list"><h2 style="font-size:20px">Ya tengo un código</h2>
-    <div class="field"><label for="o-cod">Código de 6 letras</label><input class="inp money" id="o-cod" maxlength="6" required style="text-transform:uppercase;letter-spacing:4px"></div>
-    <div class="field"><label for="o-n2">¿Cómo te llamo?</label><input class="inp" id="o-n2" maxlength="20" required></div>
-    <button class="btn full" type="submit">Unirme 💜</button></form>
+  <form id="f-pegar" class="card list"><h2 style="font-size:20px">¿Te invitaron?</h2>
+    <div class="hint">Abre el link que te mandó tu pareja, o pégalo aquí.</div>
+    <div class="field"><label for="o-link">Link de invitación</label><input class="inp" id="o-link" type="url" inputmode="url" autocomplete="off" required placeholder="https://…#g=…"></div>
+    <button class="btn full" type="submit">Abrir invitación 💜</button></form>
   <div id="o-err" class="hint" style="color:var(--danger);text-align:center"></div>
-  <button class="link" data-act="logout">Cerrar sesión</button></div>`}
+  <div class="hint" style="text-align:center">🔒 Sin registro ni contraseñas. Todo se cifra en tu celular: ni quien hizo la app puede ver sus cuentas.</div>
+  ${DEMO?"":`<a class="link" href="?demo=1" style="text-align:center">👀 Primero quiero ver el demo</a>`}
+  ${backBtn()}</div>`}
+function vJoin(){
+  const v=S.inv, g=v.grupo, ns={a:g.nombre_a, b:g.nombre_b};
+  return `<div class="list" style="gap:16px">
+  <div class="card center">${cat("happy",100)}<div class="lbl">Te invitaron a la libreta de</div><h2>${esc(ns.a)} 🤍 ${esc(ns.b)}</h2></div>
+  <div class="card list"><div class="field"><span class="lab">¿Quién eres?</span>
+    <div class="chips">${["a","b"].map(k=>`<button data-soy="${k}" aria-pressed="${S.soy===k}">${esc(ns[k])}${v.conApp.includes(k)?" 📱":""}</button>`).join("")}</div></div>
+    ${S.soy?`<div class="field"><label for="j-n">¿Cómo te llamo?</label><input class="inp" id="j-n" maxlength="20" autocomplete="given-name"></div>`:""}
+    ${S.soy&&v.conApp.includes(S.soy)?`<div class="hint">📱 ${esc(ns[S.soy])} ya entró desde otro celular. Elígelo solo si eres tú (por ejemplo, si cambiaste de celular).</div>`:""}
+    <div id="o-err" class="hint" style="color:var(--danger)"></div>
+    <button class="btn pink full" data-act="unirme" ${S.soy?"":"disabled"}>Entrar a la libreta 💜</button></div>
+  <div class="hint" style="text-align:center">🔒 Sus cuentas viajan cifradas: solo quienes tienen este link pueden verlas.</div>
+  ${backBtn()}</div>`;
+}
+function vLlave(){
+  const m=S.llave||{};
+  return `<div class="list" style="gap:16px"><div class="card center">${cat("wow",100)}<h2>Falta la llave de su libreta 🔑</h2>
+    <div class="hint">Por seguridad, la libreta se abre con su link de invitación, y en este celular no está guardado. Pídele el link a tu pareja (o búscalo en su chat) y pégalo aquí.</div></div>
+  <form id="f-pegar" class="card list"><div class="field"><label for="o-link">Link de invitación</label><input class="inp" id="o-link" type="url" inputmode="url" autocomplete="off" required placeholder="https://…#g=…"></div>
+    <div id="o-err" class="hint" style="color:var(--danger)"></div><button class="btn pink full" type="submit">Abrir la libreta 🔓</button></form>
+  <div id="cf"></div><button class="btn ghost full" data-act="ask-quitar" data-k="${esc(m.id||"")}">Quitar esta libreta de este celular</button></div>`;
+}
 
 function itemHTML(g, withDue){
   const debe = g.monto*(g.deuda??50)/100;
@@ -466,17 +445,20 @@ function vAjustes(){
         <select class="inp" id="defd"><option value="50" ${d===50?"selected":""}>La mitad</option><option value="100" ${d===100?"selected":""}>Todo</option>
         ${[30,40,60,70].map(x=>`<option value="${x}" ${d===x?"selected":""}>${x}%</option>`).join("")}</select></div>
       <button class="btn pink full" data-act="ajustes">Guardar 🎀</button></div>
-    <div class="card center"><div class="lbl">Código para invitar a tu pareja</div><div class="code">${esc(h.codigo||"······")}</div>
-      <div class="hint">Ella entra con su correo, toca "Ya tengo un código" y escribe este.</div>
-      <button class="btn ghost" data-act="copy">Copiar código</button></div>
+    <div class="card list"><h2 style="font-size:20px">Invitar a tu pareja 💌</h2>
+      <div class="hint">Mándale este link por WhatsApp. Lo abre en su celular, toca su nombre y listo: sin registrarse.</div>
+      ${DEMO?`<div class="banner">En el demo los links de invitación no funcionan. ${live?`<a href="${esc(appURL())}">Usa la app de verdad →</a>`:""}</div>`
+        :`<div class="two"><button class="btn pink" data-act="copy-link">Copiar link</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent("Llevemos nuestras cuentas en Michi Cuentas 🐈‍⬛💜 "+inviteLink())}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">WhatsApp</a></div>
+      <div class="hint">🔑 Este link es la llave de su libreta. Guárdalo (por ejemplo, en su chat de WhatsApp) por si cambian de celular, y no lo compartas con nadie más.</div>`}
+      <div id="cf"></div></div>
     <div class="card list"><h2 style="font-size:20px">Notificaciones 🔔</h2>
       <div class="hint">${({on:"Activadas en este celular ✅",off:"Desactivadas en este celular",denied:"Bloqueadas: actívalas en los ajustes del celular → Notificaciones → Michi Cuentas",unsupported:"Este navegador no permite notificaciones","ios-browser":"En iPhone, primero instala la app (Compartir → Agregar a inicio) y ábrela desde el ícono"})[S.push]||"Revisando…"}</div>
       ${S.push==="off"?`<button class="btn pink full" data-act="push-on">Activar en este celular</button>`:S.push==="on"?`<button class="btn ghost full" data-act="push-off">Desactivar en este celular</button>`:""}
       <div class="hint">Cada una las activa en su propio celular. Así reciben los recordatorios de la otra.</div></div>
     <div class="card list"><h2 style="font-size:20px">Instalar en el celular</h2>
       <div class="hint">En Chrome toca ⋮ → "Instalar app" o "Agregar a pantalla principal". Queda con su ícono de gatito 🐈‍⬛</div></div>
-    <div class="hint" style="text-align:center">Sesión: ${esc(S.user?.email||"")}</div>
-    <button class="btn ghost full" data-act="logout">${DEMO?"Reiniciar el demo":"Cerrar sesión"}</button>
+    <div class="hint" style="text-align:center">🔒 Cifrado de extremo a extremo · sin cuentas ni contraseñas</div>
+    ${DEMO?`<button class="btn ghost full" data-act="reset-demo">Reiniciar el demo</button>`:""}
   </div>`;
 }
 
@@ -493,19 +475,18 @@ async function enablePush(){
   if(!pushSupported()) throw new Error(isIOS ? "En iPhone primero instala la app (Compartir → Agregar a inicio) y ábrela desde el ícono." : "Este navegador no permite notificaciones.");
   const perm = await Notification.requestPermission();
   if(perm!=="granted") throw new Error("No se dio permiso. Puedes activarlo en los ajustes del celular → Notificaciones.");
-  const {data,error} = await sb.functions.invoke("recordar",{body:{action:"key"}});
-  if(error || !data?.publicKey) throw new Error("No pude preparar las notificaciones. Inténtalo de nuevo.");
+  if(DEMO) throw new Error("En el demo las notificaciones no se activan 🙂");
+  let publicKey; try{ publicKey=await DB.pushKey(); }catch(_){ throw new Error("No pude preparar las notificaciones. Inténtalo de nuevo."); }
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
-  if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(data.publicKey)});
+  if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(publicKey)});
   const j = sub.toJSON();
-  const {error:e2} = await sb.from("push_subs").upsert({endpoint:j.endpoint, hogar_id:S.hogar.id, p256dh:j.keys.p256dh, auth:j.keys.auth, user_id:S.user.id},{onConflict:"endpoint"});
-  if(e2) throw new Error("No pude guardar este celular. Inténtalo de nuevo.");
+  try{ await DB.savePush(S.user.id, j); }catch(_){ throw new Error("No pude guardar este celular. Inténtalo de nuevo."); }
   S.push="on";
 }
 async function disablePush(){
   try{ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription();
-    if(sub){ await sb.from("push_subs").delete().eq("endpoint",sub.endpoint); await sub.unsubscribe(); } }catch(_){}
+    if(sub){ await DB.deletePush(sub.endpoint); await sub.unsubscribe(); } }catch(_){}
   S.push="off";
 }
 const REC_PRESETS = ["Revisa Michi Cuentas 🐱","Hay que liquidar las cuentas 💸","Anoté un gasto nuevo 🧾","Recuerda pagar los fijos del mes 🏠"];
@@ -530,8 +511,9 @@ function openRecordar(){
 }
 async function sendReminder(msg){
   if(DEMO) throw new Error("En el modo demo los recordatorios no se envían 🙂 Instala tu propia copia para usarlos.");
-  const {data,error} = await sb.functions.invoke("recordar",{body:{mensaje:msg}});
-  if(error) throw new Error("No se pudo enviar. Revisa tu conexión e inténtalo otra vez.");
+  let data; try{ data=await DB.remind(S.hogar.id,{mensaje:msg, titulo:`${nm(S.lado)} te recuerda 🐾`}); }
+  catch(_){ throw new Error("No se pudo enviar. Revisa tu conexión e inténtalo otra vez."); }
+  if(!data?.personas) throw new Error(`${nm(other(S.lado))} todavía no entra a la libreta. Mándale el link de invitación (Ajustes).`);
   if(!data?.sent) throw new Error(`${nm(other(S.lado))} todavía no activó las notificaciones en su celular (Ajustes → Notificaciones).`);
   return data.sent;
 }
@@ -539,8 +521,7 @@ async function sendReminder(msg){
 /* ================= imágenes privadas ================= */
 async function signed(path){
   if(!path) return null; if(S.urls[path]) return S.urls[path];
-  const {data} = await sb.storage.from("recibos").createSignedUrl(path, 3600);
-  if(data?.signedUrl) S.urls[path]=data.signedUrl; return S.urls[path]||null;
+  const u=await DB.fileURL(S.hogar.id, path); if(u) S.urls[path]=u; return u;
 }
 function hydrateImages(){
   document.querySelectorAll("img[data-path]").forEach(async img=>{ const u=await signed(img.dataset.path); if(u) img.src=u; });
@@ -623,19 +604,16 @@ async function saveForm(){
     let foto=f.foto||null;
     if(f.file){
       const blob=await compress(f.file);
-      const path=`${S.hogar.id}/${crypto.randomUUID()}.jpg`;
-      const {error}=await sb.storage.from("recibos").upload(path, blob, {contentType:"image/jpeg"});
-      if(error) throw error;
-      foto=path;
+      foto=await DB.upload(S.hogar.id, blob);
     }
     const base={hogar_id:S.hogar.id, descr:f.descr.trim()||(f.tipo==="una"?"Gasto":"Gasto fijo"), paga:f.paga, deuda, icono:f.icono, foto, nota:f.nota.trim()||null};
     let t, body;
     if(f.tipo==="una"){ t="gastos"; body={...base, monto:+f.monto, fecha:f.fecha}; }
     else { t="reglas"; body={...base, monto: f.tipo==="cuotas"&&f.montoModo==="total"?Math.round(+f.monto/(f.cuotas||1)):+f.monto, tipo:f.tipo,
       cuotas:f.tipo==="cuotas"?f.cuotas:null, inicio:f.inicio, dia:f.dia}; }
-    const q = f.id ? sb.from(t).update(body).eq("id",f.id) : sb.from(t).insert(body);
-    const {error}=await q; if(error) throw error;
-    await loadTable(t);
+    if(f.id){ const old=S[t].find(r=>r.id===f.id)||{}; await DB.update(S.hogar.id, t, {...old, ...body, id:f.id}); }
+    else await DB.insert(S.hogar.id, t, body);
+    await loadData();
     F=null; closeSheet(); toast(f.id?"Cambios guardados 🐾":"¡Gasto anotado! 🐱");
   }catch(e){ f.busy=false; drawForm(); $("#f-err").textContent=friendly(e); }
 }
@@ -766,32 +744,24 @@ let tt; function toast(m){clearTimeout(tt);let el=$(".toast");if(!el){el=documen
 /* ================= eventos ================= */
 document.addEventListener("submit", async e=>{
   e.preventDefault(); const id=e.target.id;
-  const err = $("#l-err") || $("#o-err");
+  const err = $("#o-err");
   try{
-    if(id==="f-login"){
-      S.email=$("#l-email").value.trim();
-      const {error}=await sb.auth.signInWithOtp({email:S.email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
-      if(error) throw error; S.view="code"; render();
-    }else if(id==="f-code"){
-      const {data,error}=await sb.auth.verifyOtp({email:S.email,token:digits($("#l-code").value),type:"email"});
-      if(error) throw new Error("Ese código no sirve o ya venció. Pide otro.");
-      await onSession(data.session);
-    }else if(id==="f-link"){
-      const ses=await loginWithLink($("#l-link").value);
-      await onSession(ses);
-    }else if(id==="f-crear"){
-      const {data,error}=await sb.rpc("crear_hogar",{mi_nombre:$("#o-n1").value});
-      if(error) throw error; await onSession((await sb.auth.getSession()).data.session);
-    }else if(id==="f-unir"){
-      const {error}=await sb.rpc("unirse_hogar",{cod:$("#o-cod").value,mi_nombre:$("#o-n2").value});
-      if(error) throw error; await onSession((await sb.auth.getSession()).data.session);
+    if(id==="f-crear"){
+      e.target.querySelector("button[type=submit]").disabled=true;
+      const gid=await DB.crear({nombre_a:($("#o-n1").value.trim()||"Yo").slice(0,20), nombre_b:($("#o-n2").value.trim()||"Mi amor").slice(0,20), presupuesto:null, def_deuda:50});
+      await home(gid); S.tab="ajustes"; render(); scrollTo(0,0); toast("¡Libreta creada! Ahora invita a tu pareja 💌");
+    }else if(id==="f-pegar"){
+      const inv=parseInvite($("#o-link").value);
+      if(!inv) throw new Error("Ese no parece un link de invitación de Michi Cuentas. Cópialo completo.");
+      await openInvite(inv);
     }
-  }catch(ex){ if(err) err.textContent = ex.message?.includes("rate")?"Espera un minuto antes de pedir otro código.":(ex.message||"Algo falló, inténtalo otra vez."); }
+  }catch(ex){ if(err) err.textContent = ex.message||"Algo falló, inténtalo otra vez."; e.target.querySelector("button[type=submit]")?.removeAttribute("disabled"); }
 });
 document.addEventListener("click", async e=>{
   if(e.target.classList.contains("scrim")){closeSheet();return}
   const el=e.target.closest("button"); if(!el) return;
   const d=el.dataset;
+  if(d.soy && S.view==="join"){ const nn=$("#j-n")?.value; S.soy=d.soy; render(); const i=$("#j-n"); if(i){ i.value = S.inv.conApp.includes(d.soy)||!nn ? (d.soy==="a"?S.inv.grupo.nombre_a:S.inv.grupo.nombre_b)||"" : nn; i.focus(); } return }
   if(d.tab){S.tab=d.tab;S.q="";if(d.tab==="gastos")S.gview="pend";render();scrollTo(0,0);return}
   if(d.goAjustes){S.tab="ajustes";render();scrollTo(0,0);setTimeout(()=>$("#na")?.focus(),50);return}
   if(d.go){S.tab=d.go;S.gview="pend";render();scrollTo(0,0);return}
@@ -810,8 +780,8 @@ document.addEventListener("click", async e=>{
   if(d.gico && F?.kind==="meta"){F.nombre=$("#g-n").value;F.objetivo=digits($("#g-o").value);F.icono=d.gico;return F.draw()}
   if(d.reac){
     const [t,id]=d.k.split(":"); const x=S[t].find(r=>r.id===id); const val=x.reac===d.reac?null:d.reac;
-    const {error}=await sb.from(t).update({reac:val}).eq("id",id); if(error) return toast(friendly(error));
-    await loadTable(t); openDetail((t==="gastos"?"g:":"r:")+id); return;
+    try{ await DB.update(S.hogar.id,t,{...x,reac:val}); }catch(ex){ return toast(friendly(ex)); }
+    await loadData(); openDetail((t==="gastos"?"g:":"r:")+id); return;
   }
   const a=d.act; if(!a) return;
   try{
@@ -833,45 +803,59 @@ document.addEventListener("click", async e=>{
     else if(a==="csv-c"){ const i=+d.k, c=sortedCierres(S.cierres)[i], D=periodData(S.gastos,S.reglas,S.pagos,S.cierres,i,today()); downloadCSV(D.movs,D.pagos,"liquidado-"+c.corte); }
     else if(a==="liq-ok"){
       el.disabled=true;
-      if(F.de){ const {error}=await sb.from("pagos").insert({hogar_id:S.hogar.id,de:F.de,monto:F.monto,fecha:today()}); if(error) throw error; }
-      const {error}=await sb.from("cierres").insert({hogar_id:S.hogar.id,de:F.de,monto:F.de?F.monto:0,corte:F.corte||today(),gastos_total:F.total}); if(error) throw error;
-      await Promise.all([loadTable("pagos"),loadTable("cierres")]); S.gview="pend"; closeSheet(); toast("¡Deuda liquidada! Empieza un período nuevo 🎉");
+      if(F.de) await DB.insert(S.hogar.id,"pagos",{de:F.de,monto:F.monto,fecha:today()});
+      await DB.insert(S.hogar.id,"cierres",{de:F.de,monto:F.de?F.monto:0,corte:F.corte||today(),gastos_total:F.total});
+      await loadData(); S.gview="pend"; closeSheet(); toast("¡Deuda liquidada! Empieza un período nuevo 🎉");
     }
     else if(a==="edit") editFrom(d.k);
     else if(a==="csv") downloadCSV();
-    else if(a==="back-login"){S.view="login";render()}
-    else if(a==="logout"){ await sb.auth.signOut(); try{localStorage.removeItem("michi:last")}catch(_){} }
+    else if(a==="reintentar"){ S.view="loading"; render(); boot(); }
+    else if(a==="reset-demo"){ await DB.reset(); location.reload(); }
+    else if(a==="back-app"){ home(); }
+    else if(a==="unirme"){
+      const v=S.inv, k=S.soy, n=($("#j-n")?.value.trim()||"").slice(0,20);
+      if(!n){ $("#o-err").textContent="Escribe tu nombre."; return; }
+      el.disabled=true;
+      try{
+        const gid=await DB.unirse(v, k);
+        const {grupo}=await DB.grupo(gid);
+        if((k==="a"?grupo.nombre_a:grupo.nombre_b)!==n) await DB.saveGrupo(gid,{...grupo, [k==="a"?"nombre_a":"nombre_b"]:n});
+        S.inv=null; await home(gid); toast("¡Listo! Ya están conectadas 💜");
+      }catch(ex){ el.disabled=false; $("#o-err").textContent=ex.message||friendly(ex); }
+    }
+    else if(a==="ask-quitar") $("#cf").innerHTML=`<div class="confirm"><div class="sub">La libreta dejará de aparecer en este celular. Tu pareja la sigue viendo.</div><button class="btn danger full" data-act="quitar" data-k="${esc(d.k)}">Sí, quitarla</button></div>`;
+    else if(a==="quitar"){ await DB.salir(d.k); try{localStorage.removeItem("michi:last")}catch(_){} S.hogar=null; await home(); }
+    else if(a==="copy-link"){ const l=inviteLink(); try{await navigator.clipboard.writeText(l);toast("Link copiado: pégalo en WhatsApp 💌")}catch(_){ $("#cf").innerHTML=`<div class="note-box" style="word-break:break-all;user-select:all">${esc(l)}</div>`; } }
     else if(a==="askdel") $("#cf").innerHTML=`<div class="confirm"><div class="sub">¿Seguro? Esto no se puede deshacer.</div><button class="btn danger full" data-act="del" data-k="${esc(d.k)}">Sí, borrar</button></div>`;
     else if(a==="del"){
       const [t,id]=d.k.split(":"); const x=S[t].find(r=>r.id===id);
-      const {error}=await sb.from(t).delete().eq("id",id); if(error) throw error;
-      if(x?.foto) sb.storage.from("recibos").remove([x.foto]);
-      await loadTable(t); closeSheet(); toast("Borrado 🗑️");
+      await DB.remove(t,id);
+      if(x?.foto) DB.removeFile(x.foto);
+      await loadData(); closeSheet(); toast("Borrado 🗑️");
     }
-    else if(a==="stop"){ const {error}=await sb.from("reglas").update({fin:ym(new Date())}).eq("id",d.k); if(error) throw error; await loadTable("reglas"); closeSheet(); toast("Listo, no se cobra más 🐾"); }
+    else if(a==="stop"){ const r=S.reglas.find(x=>x.id===d.k); await DB.update(S.hogar.id,"reglas",{...r,fin:ym(new Date())}); await loadData(); closeSheet(); toast("Listo, no se cobra más 🐾"); }
     else if(a==="pagar"){
       const m=+digits($("#p-monto").value); if(m<=0){$("#f-err").textContent="Escribe un monto mayor a cero.";return}
-      const {error}=await sb.from("pagos").insert({hogar_id:S.hogar.id,de:F.de,monto:m,fecha:today()}); if(error) throw error;
-      await loadTable("pagos"); closeSheet(); toast("¡Pago registrado! 💕");
+      await DB.insert(S.hogar.id,"pagos",{de:F.de,monto:m,fecha:today()});
+      await loadData(); closeSheet(); toast("¡Pago registrado! 💕");
     }
     else if(a==="savemeta"){
       const n=$("#g-n").value.trim(), o=+digits($("#g-o").value);
       if(!n||o<=0){$("#f-err").textContent="Ponle un nombre y un monto.";return}
-      const {error}=await sb.from("metas").insert({hogar_id:S.hogar.id,nombre:n,objetivo:o,icono:F.icono}); if(error) throw error;
-      await loadTable("metas"); closeSheet(); toast("Meta creada ✨");
+      await DB.insert(S.hogar.id,"metas",{nombre:n,objetivo:o,ahorrado:0,icono:F.icono});
+      await loadData(); closeSheet(); toast("Meta creada ✨");
     }
     else if(a==="abonar"){
       const m=+digits($("#m-ab").value); if(m<=0){$("#f-err").textContent="Escribe un monto.";return}
       const x=S.metas.find(g=>g.id===d.k); const nuevo=Math.max(0,x.ahorrado+m*(+d.s));
-      const {error}=await sb.from("metas").update({ahorrado:nuevo}).eq("id",x.id); if(error) throw error;
-      await loadTable("metas"); closeSheet(); toast(+d.s>0?"¡A la alcancía! 🐷":"Listo");
+      await DB.update(S.hogar.id,"metas",{...x,ahorrado:nuevo});
+      await loadData(); closeSheet(); toast(+d.s>0?"¡A la alcancía! 🐷":"Listo");
     }
     else if(a==="ajustes"){
       const body={nombre_a:$("#na").value.trim()||"Yo",nombre_b:$("#nb").value.trim()||"Mi amor",presupuesto:+digits($("#pres").value)||null,def_deuda:+$("#defd").value};
-      const {error}=await sb.from("hogares").update(body).eq("id",S.hogar.id); if(error) throw error;
+      await DB.saveGrupo(S.hogar.id,{...S.hogar,...body});
       await loadHogar(); render(); toast("Guardado 🎀");
     }
-    else if(a==="copy"){ try{await navigator.clipboard.writeText(S.hogar.codigo);toast("Código copiado 📋")}catch(_){toast("Código: "+S.hogar.codigo)} }
   }catch(ex){ const fe=$("#f-err"); if(fe) fe.textContent=friendly(ex); else toast(friendly(ex)); }
 });
 $("#fab").addEventListener("click",()=> S.tab==="metas" ? openMeta() : newForm());
@@ -886,7 +870,7 @@ document.addEventListener("input", e=>{
 document.addEventListener("change", e=>{
   if(e.target.id==="f-file"&&F){const file=e.target.files[0]; if(!file) return; syncForm(); F.file=file; F.preview=URL.createObjectURL(file); drawForm();}
 });
-addEventListener("online",()=>{S.online=true; if(S.hogar){Promise.all([loadHogar(),...TABLES.map(loadTable)]).then(refresh)} refresh();});
+addEventListener("online",()=>{S.online=true; if(S.hogar?.id && S.view==="app"){Promise.all([loadHogar(),loadData()]).then(refresh).catch(()=>{})} refresh();});
 addEventListener("offline",()=>{S.online=false;refresh();});
 addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#layer").innerHTML) closeSheet(); });
 

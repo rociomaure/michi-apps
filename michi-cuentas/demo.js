@@ -2,7 +2,7 @@
 // Imita lo justo de Supabase para probar la app sin configurar nada.
 // Los datos viven solo en este navegador (localStorage).
 
-const KEY = "michi-demo-v1";
+const KEY = "michi-demo-v2";
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36));
 const pad = n => String(n).padStart(2, "0");
 const ymOf = d => d.getFullYear() + "-" + pad(d.getMonth() + 1);
@@ -16,7 +16,7 @@ function seed() {
   const cierreFecha = dayOf(prev, 28);
   return {
     user: { id: "demo-luna", email: "luna@ejemplo.cl" },
-    hogares: [{ id: h, codigo: "MIAU42", nombre_a: "Luna", nombre_b: "Sol", presupuesto: 900000, def_deuda: 50 }],
+    hogares: [{ id: h, codigo: "MIAU42DEMO", nombre_a: "Luna", nombre_b: "Sol", presupuesto: 900000, def_deuda: 50 }],
     miembros: [{ hogar_id: h, user_id: "demo-luna", lado: "a" }, { hogar_id: h, user_id: "demo-sol", lado: "b" }],
     gastos: [
       g("Comida para los michis", 32990, "a", 50, "🐾", dayOf(prev, 12)),
@@ -42,74 +42,47 @@ function seed() {
   };
 }
 
-export function createDemoClient() {
+export function createDemoDB() {
   let db;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) { db = null; }
   if (!db) db = seed();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {} };
   save();
+  const TABLES = ["gastos", "reglas", "pagos", "metas", "cierres"];
   const blobs = {};
-  const session = { user: db.user, access_token: "demo" };
-
-  function query(table) {
-    let op = "select", payload = null, filters = [], one = null;
-    const rows = () => (db[table] ||= []);
-    const match = r => filters.every(([k, v, neg]) => neg ? r[k] !== v : r[k] === v);
-    const b = {
-      select() { return b; },
-      order() { return b; },
-      eq(k, v) { filters.push([k, v, false]); return b; },
-      neq(k, v) { filters.push([k, v, true]); return b; },
-      single() { one = "single"; return b; },
-      maybeSingle() { one = "maybe"; return b; },
-      insert(o) { op = "insert"; payload = o; return b; },
-      update(o) { op = "update"; payload = o; return b; },
-      upsert(o) { op = "upsert"; payload = o; return b; },
-      delete() { op = "delete"; return b; },
-      then(res, rej) { return Promise.resolve(run()).then(res, rej); }
-    };
-    function run() {
-      let data = null;
-      if (op === "insert" || op === "upsert") {
-        const list = (Array.isArray(payload) ? payload : [payload]).map(o => ({ id: uid(), creado: new Date().toISOString(), ...o }));
-        db[table] = rows().filter(r => !list.some(n => n.endpoint && r.endpoint === n.endpoint)).concat(list);
-        data = list;
-      } else if (op === "update") {
-        db[table] = rows().map(r => match(r) ? { ...r, ...payload } : r);
-        data = db[table].filter(match);
-      } else if (op === "delete") {
-        db[table] = rows().filter(r => !match(r));
-      } else {
-        data = rows().filter(match).map(r => ({ ...r }));
-        if (one) data = data[0] || null;
-      }
-      if (op !== "select") save();
-      return { data, error: null };
-    }
-    return b;
-  }
-
+  const copy = o => JSON.parse(JSON.stringify(o));
+  const code = () => Array.from({ length: 10 }, () => "ABCDEFGHJKMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 31)]).join("");
+  const hOf = id => db.hogares.find(h => h.id === id);
   return {
     demo: true,
-    from: query,
-    rpc: async () => ({ data: db.hogares[0], error: null }),
-    auth: {
-      getSession: async () => ({ data: { session } }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
-      signOut: async () => { try { localStorage.removeItem(KEY); localStorage.removeItem("michi:last"); } catch (_) {} location.reload(); return { error: null }; },
-      signInWithOtp: async () => ({ error: null }),
-      verifyOtp: async () => ({ data: { session }, error: null }),
-      setSession: async () => ({ data: { session }, error: null })
+    async ensureSession() { return { user: db.user }; },
+    async misGrupos(uid) { return db.miembros.filter(m => m.user_id === uid).map(m => { const h = hOf(m.hogar_id); return { id: h.id, k: m.lado, codigo: h.codigo, grupo: copy(h), sinLlave: false }; }); },
+    async grupo(gid) { return { grupo: copy(hOf(gid)), miembros: db.miembros.filter(m => m.hogar_id === gid).map(m => ({ k: m.lado })) }; },
+    async items(gid) { const out = {}; for (const t of TABLES) out[t] = copy((db[t] || []).filter(r => r.hogar_id === gid)); return out; },
+    async insert(gid, t, objs) {
+      const list = (Array.isArray(objs) ? objs : [objs]).map(o => ({ ...copy(o), id: uid(), hogar_id: gid, creado: new Date().toISOString() }));
+      db[t] = (db[t] || []).concat(list); save();
     },
-    storage: {
-      from: () => ({
-        upload: async (path, blob) => { blobs[path] = URL.createObjectURL(blob); return { data: { path }, error: null }; },
-        createSignedUrl: async (path) => ({ data: { signedUrl: blobs[path] || null } }),
-        remove: async () => ({ data: null, error: null })
-      })
+    async update(gid, t, full) { db[t] = db[t].map(r => r.id === full.id ? { ...copy(full), hogar_id: gid } : r); save(); },
+    async remove(t, id) { db[t] = db[t].filter(r => r.id !== id); save(); },
+    async saveGrupo(gid, g) { Object.assign(hOf(gid), copy(g), { id: gid }); save(); },
+    async crear(g) { const h = { ...copy(g), id: uid(), codigo: code() }; db.hogares.push(h); db.miembros.push({ hogar_id: h.id, user_id: db.user.id, lado: "a" }); save(); return h.id; },
+    async ver(inv) {
+      const h = db.hogares.find(x => x.codigo === inv.codigo);
+      if (!h) throw new Error("Este link de invitación no existe o la libreta se borró.");
+      return { id: h.id, grupo: copy(h), conApp: db.miembros.filter(m => m.hogar_id === h.id).map(m => m.lado) };
     },
-    functions: { invoke: async () => ({ data: { sent: 0, demo: true }, error: null }) },
-    channel: () => { const c = { on: () => c, subscribe: () => c }; return c; },
-    removeChannel: () => {}
+    async unirse(inv, k) {
+      const h = db.hogares.find(x => x.codigo === inv.codigo);
+      db.miembros = db.miembros.filter(m => !(m.hogar_id === h.id && (m.user_id === db.user.id || m.lado === k)));
+      db.miembros.push({ hogar_id: h.id, user_id: db.user.id, lado: k }); save(); return h.id;
+    },
+    async salir(gid) { db.miembros = db.miembros.filter(m => !(m.hogar_id === gid && m.user_id === db.user.id)); save(); },
+    async upload(gid, blob) { const path = gid + "/" + uid(); blobs[path] = URL.createObjectURL(blob); return path; },
+    async fileURL(gid, path) { return blobs[path] || null; },
+    removeFile() {}, subscribe() {},
+    async pushKey() { throw new Error("demo"); }, async savePush() {}, async deletePush() {},
+    async remind() { return { sent: 0, personas: 0, demo: true }; },
+    async reset() { try { localStorage.removeItem(KEY); localStorage.removeItem("michi:last"); } catch (_) {} }
   };
 }

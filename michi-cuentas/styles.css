@@ -139,3 +139,7 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.1}
 .preset.on{border-color:var(--pink);background:var(--pink-2)}
 .preset.on .tick{background:var(--pink);border-color:var(--pink);color:#2b2140}
 .banner a{color:var(--ink);font-weight:800;text-decoration-color:var(--pink);text-underline-offset:3px}
+[hidden]{display:none!important}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:2px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+.chips button[aria-pressed="true"]{border-color:var(--deep);background:var(--pink);color:var(--deep)}
